@@ -38,6 +38,11 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>bigdataviewer-core</artifactId>
+			<version>4.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>sc.fiji</groupId>
+			<artifactId>bigdataviewer-vistools</artifactId>
 		</dependency>
 
 		<!-- Mastodon deps -->
@@ -56,6 +61,11 @@
 			<groupId>net.trackmate</groupId>
 			<artifactId>trackmate</artifactId>
 			<version>1.0.0-beta-3-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>net.trndy</groupId>
+			<artifactId>mastodon-tracking</artifactId>
+			<version>0.1.0-SNAPSHOT</version>
 		</dependency>
 
 		<!-- ImgLib2 deps -->
@@ -80,6 +90,17 @@
 			<artifactId>ui-behaviour</artifactId>
 			<version>1.7.2-SNAPSHOT</version>
 		</dependency>
+
+
+
+		<!-- Scifio deps -->
+
+		<dependency>
+			<groupId>io.scif</groupId>
+			<artifactId>scifio</artifactId>
+		</dependency>
+
+
 
 		<!-- Test dependencies -->
 		<dependency>
