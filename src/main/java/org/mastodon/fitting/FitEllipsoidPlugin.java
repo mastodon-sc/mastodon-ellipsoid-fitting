@@ -99,7 +99,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 	{
 		return Arrays.asList(
 				menu( "Plugins",
-						menu( "Ellispoid Fitting",
+						menu( "Ellipsoid Fitting",
 								item( FIT_SELECTED_VERTICES ) ) ) );
 	}
 
