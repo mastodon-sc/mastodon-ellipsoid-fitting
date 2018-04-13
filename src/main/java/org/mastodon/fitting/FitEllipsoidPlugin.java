@@ -142,7 +142,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 		}
 	}
 
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 
 	private < T extends RealType< T > > void process( BasicSetupImgLoader< T > imgLoader, final int setupId )
 	{
