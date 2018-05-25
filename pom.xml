@@ -8,13 +8,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>20.0.0</version>
+		<version>21.0.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>org.mastodon</groupId>
 	<artifactId>mastodon-ellipsoid-fitting</artifactId>
-	<version>0.1.0-SNAPSHOT</version>
+	<version>0.2.0-SNAPSHOT</version>
 
 	<name>Mastodon Ellipsoid Fitting</name>
 	<description>Mastodon plugin for fitting ellipsoids around spots</description>
@@ -38,10 +38,12 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>bigdataviewer-core</artifactId>
+			<version>5.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>bigdataviewer-vistools</artifactId>
+			<version>1.0.0-beta-11</version>
 		</dependency>
 
 		<!-- Mastodon deps -->
@@ -49,22 +51,22 @@
 		<dependency>
 			<groupId>org.mastodon</groupId>
 			<artifactId>mastodon-collection</artifactId>
-			<version>1.0.0-beta-15-SNAPSHOT</version>
+			<version>1.0.0-beta-14</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mastodon</groupId>
 			<artifactId>mastodon-graph</artifactId>
-			<version>1.0.0-beta-12-SNAPSHOT</version>
+			<version>1.0.0-beta-11</version>
 		</dependency>
 		<dependency>
 			<groupId>net.trackmate</groupId>
 			<artifactId>trackmate</artifactId>
-			<version>1.0.0-beta-5-SNAPSHOT</version>
+			<version>1.0.0-beta-6</version>
 		</dependency>
 		<dependency>
 			<groupId>net.trndy</groupId>
 			<artifactId>mastodon-tracking</artifactId>
-			<version>0.1.1-SNAPSHOT</version>
+			<version>1.0.0-beta-3</version>
 		</dependency>
 
 		<!-- ImgLib2 deps -->
@@ -87,7 +89,7 @@
 		<dependency>
 			<groupId>org.scijava</groupId>
 			<artifactId>ui-behaviour</artifactId>
-			<version>1.7.4-SNAPSHOT</version>
+			<version>1.7.3</version>
 		</dependency>
 
 
@@ -134,8 +136,6 @@
 
 	<properties>
 		<package-name>net.trackmate</package-name>
-
-		<enforcer.skip>true</enforcer.skip>
 
 		<license.licenseName>not licensed yet</license.licenseName>
 		<license.projectName>mastodon-ellipsoid-fitting</license.projectName>
