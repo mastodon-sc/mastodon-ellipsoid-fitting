@@ -222,7 +222,8 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 				bdv = inputSource;
 			}
 
-			final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ), new ArrayImgFactory<>(), minGradientMagnitude );
+			final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ),
+					new ArrayImgFactory<>(new FloatType()), minGradientMagnitude );
 			final AffineTransform3D zeroMinSourceToGlobal = sourceToGlobal.copy();
 			final AffineTransform3D shiftToMin = new AffineTransform3D();
 			shiftToMin.translate( lMin[ 0 ], lMin[ 1 ], lMin[ 2 ] );
