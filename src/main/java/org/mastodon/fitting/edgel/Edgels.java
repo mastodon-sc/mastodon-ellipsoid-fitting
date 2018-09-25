@@ -65,7 +65,6 @@ public class Edgels
 
 		final double[] p1 = new double[ 3 ];
 		final double[] p2 = new double[ 3 ];
-		final double[] x = new double[ 3 ];
 		for ( int i = 0; i < valid.length; ++i )
 		{
 			if ( !valid[ i ] )
