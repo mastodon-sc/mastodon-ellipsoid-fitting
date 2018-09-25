@@ -3,36 +3,16 @@ package org.mastodon.fitting;
 import static org.mastodon.app.ui.ViewMenuBuilder.item;
 import static org.mastodon.app.ui.ViewMenuBuilder.menu;
 
-import bdv.tools.brightness.ConverterSetup;
-import bdv.tools.brightness.MinMaxGroup;
-import bdv.util.Bdv;
-import bdv.util.BdvOverlaySource;
-import bdv.util.BdvStackSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
 import java.util.function.BiConsumer;
+
 import javax.swing.UIManager;
 
-import mpicbg.spim.data.generic.AbstractSpimData;
-import net.imglib2.EuclideanSpace;
-import net.imglib2.Interval;
-import net.imglib2.algorithm.edge.Edgel;
-import net.imglib2.algorithm.edge.SubpixelEdgelDetection;
-import net.imglib2.algorithm.gauss3.Gauss3;
-import net.imglib2.converter.Converters;
-import net.imglib2.converter.RealFloatConverter;
-import net.imglib2.exception.IncompatibleTypeException;
-import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.img.array.ArrayImgs;
-import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Util;
 import org.mastodon.app.ui.ViewMenuBuilder;
 import org.mastodon.collection.RefSet;
 import org.mastodon.fitting.edgel.Edgels;
@@ -54,13 +34,30 @@ import org.scijava.ui.behaviour.util.AbstractNamedAction;
 import org.scijava.ui.behaviour.util.Actions;
 import org.scijava.ui.behaviour.util.RunnableAction;
 
+import bdv.tools.brightness.ConverterSetup;
+import bdv.tools.brightness.MinMaxGroup;
 import bdv.util.Affine3DHelpers;
+import bdv.util.Bdv;
 import bdv.util.BdvFunctions;
+import bdv.util.BdvStackSource;
+import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.BasicSetupImgLoader;
 import mpicbg.spim.data.registration.ViewRegistrations;
 import mpicbg.spim.data.sequence.TimePoint;
+import net.imglib2.EuclideanSpace;
+import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.algorithm.edge.Edgel;
+import net.imglib2.algorithm.edge.SubpixelEdgelDetection;
+import net.imglib2.algorithm.gauss3.Gauss3;
+import net.imglib2.converter.Converters;
+import net.imglib2.converter.RealFloatConverter;
+import net.imglib2.exception.IncompatibleTypeException;
+import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 
 @Plugin( type = FitEllipsoidPlugin.class )
@@ -126,7 +123,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 		// TODO: parameters
 		final int setupId = 0;
 
-
 		System.out.println( "fitSelectedVertices()" );
 		if ( pluginAppModel != null )
 		{
@@ -144,7 +140,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 
 	private static final boolean DEBUG = false;
 
-	private < T extends RealType< T > > void process( BasicSetupImgLoader< T > imgLoader, final int setupId )
+	private < T extends RealType< T > > void process( final BasicSetupImgLoader< T > imgLoader, final int setupId )
 	{
 		// TODO: parameters -----------------
 		final double smoothSigma = 2;
@@ -160,9 +156,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 		final double angleCutoffDistance = 30 * Math.PI / 180.0;
 		final double maxCenterDistance = 10;
 		// ----------------------------------
-
-
-
 
 		final MamutAppModel appModel = pluginAppModel.getAppModel();
 		final AbstractSpimData< ? > spimData = appModel.getSharedBdvData().getSpimData();
@@ -187,7 +180,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 			for ( int d = 0; d < 3; ++d )
 				scale[ d ] = Affine3DHelpers.extractScale( sourceToGlobal, d );
 
-
 			final long[] lMin = new long[ 3 ];
 			final long[] lMax = new long[ 3 ];
 			final double radius = Math.sqrt( spot.getBoundingSphereRadiusSquared() );
@@ -198,9 +190,8 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 				lMax[ d ] = ( long ) ( lCenter[ d ] + halfsize );
 			}
 
-			RandomAccessibleInterval< T > cropped = Views.interval( Views.extendBorder( imgLoader.getImage( timepointId ) ), lMin, lMax );
+			final RandomAccessibleInterval< T > cropped = Views.interval( Views.extendBorder( imgLoader.getImage( timepointId ) ), lMin, lMax );
 			final RandomAccessibleInterval< FloatType > converted = Converters.convert( cropped, new RealFloatConverter<>(), new FloatType() );
-
 
 			final RandomAccessibleInterval< FloatType > input;
 			if ( smoothSigma > 0 )
@@ -213,9 +204,8 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 				{
 					Gauss3.gauss( sigmas, Views.zeroMin( converted ), img );
 				}
-				catch ( IncompatibleTypeException e )
-				{
-				}
+				catch ( final IncompatibleTypeException e )
+				{}
 				input = Views.translate( img, lMin );
 			}
 			else
@@ -233,15 +223,15 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 			}
 
 			final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ), new ArrayImgFactory<>(), minGradientMagnitude );
-			AffineTransform3D zeroMinSourceToGlobal = sourceToGlobal.copy();
-			AffineTransform3D shiftToMin = new AffineTransform3D();
+			final AffineTransform3D zeroMinSourceToGlobal = sourceToGlobal.copy();
+			final AffineTransform3D shiftToMin = new AffineTransform3D();
 			shiftToMin.translate( lMin[ 0 ], lMin[ 1 ], lMin[ 2 ] );
 			zeroMinSourceToGlobal.concatenate( shiftToMin );
 			final ArrayList< Edgel > gEdgels = Edgels.transformEdgels( lEdgels, zeroMinSourceToGlobal );
 			final ArrayList< Edgel > filteredEdgels = Edgels.filterEdgelsByOcclusion( Edgels.filterEdgelsByDirection( gEdgels, gCenter ), gCenter, maxAngle, maxFactor );
 
 			EdgelsOverlay edgelsOverlay;
-			if( DEBUG )
+			if ( DEBUG )
 			{
 				edgelsOverlay = new EdgelsOverlay( filteredEdgels, 0.01 );
 				BdvFunctions.showOverlay( edgelsOverlay, "filtered edgels", Bdv.options().addTo( bdv ) );
@@ -277,9 +267,9 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 	}
 
 	// TODO: move to imglib2 core and make versions for int[], double[] ???
-	public static < T extends EuclideanSpace > long[] longArrayFrom( T t, BiConsumer< T, long[] > get )
+	public static < T extends EuclideanSpace > long[] longArrayFrom( final T t, final BiConsumer< T, long[] > get )
 	{
-		long[] a = new long[ t.numDimensions() ];
+		final long[] a = new long[ t.numDimensions() ];
 		get.accept( t, a );
 		return a;
 	}
