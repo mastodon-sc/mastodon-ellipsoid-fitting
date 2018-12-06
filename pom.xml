@@ -11,7 +11,7 @@
 
 	<groupId>org.mastodon</groupId>
 	<artifactId>mastodon-ellipsoid-fitting</artifactId>
-	<version>0.2.1-SNAPSHOT</version>
+	<version>0.2.1</version>
 
 	<name>Mastodon Ellipsoid Fitting</name>
 	<description>Mastodon plugin for fitting ellipsoids around spots</description>
@@ -122,7 +122,7 @@
 	<scm>
 		<connection>scm:git:git:github.com/bigdataviewer/mastodon-ellipsoid-fitting</connection>
 		<developerConnection>scm:git:git@github.com:bigdataviewer/mastodon-ellipsoid-fitting</developerConnection>
-		<tag>HEAD</tag>
+		<tag>mastodon-ellipsoid-fitting-0.2.1</tag>
 		<url>https://github.com/bigdataviewer/mastodon-ellipsoid-fitting</url>
 	</scm>
 	<issueManagement>
