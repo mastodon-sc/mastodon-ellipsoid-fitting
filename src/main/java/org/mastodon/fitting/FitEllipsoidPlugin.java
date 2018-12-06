@@ -250,6 +250,8 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 					insideCutoffDistance,
 					angleCutoffDistance,
 					maxCenterDistance );
+			if ( ellipsoid == null )
+				return;
 			final long t2 = System.currentTimeMillis();
 			System.out.println( t2 - t1 );
 
