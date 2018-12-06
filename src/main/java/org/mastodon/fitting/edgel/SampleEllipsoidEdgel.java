@@ -88,12 +88,12 @@ public class SampleEllipsoidEdgel
 			}
 			catch ( final IllegalArgumentException e )
 			{
-				e.printStackTrace();
-				System.out.println( "oops" );
+//				e.printStackTrace();
+//				System.out.println( "oops" );
 			}
 			catch ( final RuntimeException e )
 			{
-				System.out.println( "psd" );
+//				System.out.println( "psd" );
 			}
 		}
 
@@ -103,7 +103,7 @@ public class SampleEllipsoidEdgel
 		final Ellipsoid refined = fitToInliers( bestEllipsoid, edgels, outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance );
 		if ( refined == null )
 		{
-			System.err.println( "refined ellipsoid == null! This shouldn't happen!");
+//			System.err.println( "refined ellipsoid == null! This shouldn't happen!");
 			return bestEllipsoid;
 		}
 		return refined;

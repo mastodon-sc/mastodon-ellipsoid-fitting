@@ -125,7 +125,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 		// TODO: parameters
 		final int setupId = 0;
 
-		System.out.println( "fitSelectedVertices()" );
+//		System.out.println( "fitSelectedVertices()" );
 		if ( pluginAppModel != null )
 		{
 			final MamutAppModel appModel = pluginAppModel.getAppModel();
@@ -136,7 +136,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 
 			process( ( BasicSetupImgLoader ) imgLoader, setupId );
 
-			System.out.println( "fitSelectedVertices()" );
+//			System.out.println( "fitSelectedVertices()" );
 		}
 	}
 
@@ -165,8 +165,8 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 		final ViewRegistrations viewReg = spimData.getViewRegistrations();
 
 		final RefSet< Spot > vertices = appModel.getSelectionModel().getSelectedVertices();
-		if ( vertices.isEmpty() )
-			System.err.println( "no vertex selected" );
+//		if ( vertices.isEmpty() )
+//			System.err.println( "no vertex selected" );
 
 		for ( final Spot spot : vertices )
 		{
@@ -253,7 +253,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 			if ( ellipsoid == null )
 				return;
 			final long t2 = System.currentTimeMillis();
-			System.out.println( t2 - t1 );
+//			System.out.println( t2 - t1 );
 
 			if ( DEBUG )
 			{
