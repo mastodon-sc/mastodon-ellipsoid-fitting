@@ -13,6 +13,22 @@ import java.util.function.BiConsumer;
 
 import javax.swing.UIManager;
 
+import net.imglib2.EuclideanSpace;
+import net.imglib2.Interval;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.algorithm.edge.Edgel;
+import net.imglib2.algorithm.edge.SubpixelEdgelDetection;
+import net.imglib2.algorithm.gauss3.Gauss3;
+import net.imglib2.converter.Converters;
+import net.imglib2.converter.RealFloatConverter;
+import net.imglib2.exception.IncompatibleTypeException;
+import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.view.Views;
+
 import org.mastodon.app.ui.ViewMenuBuilder;
 import org.mastodon.collection.RefSet;
 import org.mastodon.fitting.edgel.Edgels;
@@ -22,9 +38,9 @@ import org.mastodon.fitting.ui.EdgelsOverlay;
 import org.mastodon.fitting.ui.EllipsoidOverlay;
 import org.mastodon.plugin.MastodonPlugin;
 import org.mastodon.plugin.MastodonPluginAppModel;
+import org.mastodon.project.MamutProject;
+import org.mastodon.project.MamutProjectIO;
 import org.mastodon.revised.mamut.MamutAppModel;
-import org.mastodon.revised.mamut.MamutProject;
-import org.mastodon.revised.mamut.MamutProjectIO;
 import org.mastodon.revised.mamut.Mastodon;
 import org.mastodon.revised.model.mamut.Spot;
 import org.scijava.AbstractContextual;
@@ -44,21 +60,6 @@ import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.BasicSetupImgLoader;
 import mpicbg.spim.data.registration.ViewRegistrations;
 import mpicbg.spim.data.sequence.TimePoint;
-import net.imglib2.EuclideanSpace;
-import net.imglib2.Interval;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.algorithm.edge.Edgel;
-import net.imglib2.algorithm.edge.SubpixelEdgelDetection;
-import net.imglib2.algorithm.gauss3.Gauss3;
-import net.imglib2.converter.Converters;
-import net.imglib2.converter.RealFloatConverter;
-import net.imglib2.exception.IncompatibleTypeException;
-import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.img.array.ArrayImgs;
-import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.view.Views;
 
 @Plugin( type = FitEllipsoidPlugin.class )
 public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPlugin
@@ -118,6 +119,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 		fitSelectedVerticesAction.setEnabled( appModel != null );
 	}
 
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	private void fitSelectedVertices()
 	{
 		// TODO: parameters
@@ -130,7 +132,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 			final AbstractSpimData< ? > spimData = appModel.getSharedBdvData().getSpimData();
 			final BasicSetupImgLoader< ? > imgLoader = spimData.getSequenceDescription().getImgLoader().getSetupImgLoader( setupId );
 			if ( !( imgLoader.getImageType() instanceof RealType ) )
-				throw new IllegalArgumentException( "Expected EealType image source" );
+				throw new IllegalArgumentException( "Expected RealType image source" );
 
 			process( ( BasicSetupImgLoader ) imgLoader, setupId );
 
@@ -205,7 +207,8 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 					Gauss3.gauss( sigmas, Views.zeroMin( converted ), img );
 				}
 				catch ( final IncompatibleTypeException e )
-				{}
+				{
+				}
 				input = Views.translate( img, lMin );
 			}
 			else
