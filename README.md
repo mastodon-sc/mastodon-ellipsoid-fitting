@@ -1,2 +1,2 @@
-[![](https://travis-ci.org/bigdataviewer/mastodon-ellipsoid-fitting.svg?branch=master)](https://travis-ci.org/bigdataviewer/mastodon-ellipsoid-fitting)
+[![](https://travis-ci.com/mastodon-sc/mastodon-ellipsoid-fitting.svg?branch=master)](https://travis-ci.com/mastodon-sc/mastodon-ellipsoid-fitting)
 
