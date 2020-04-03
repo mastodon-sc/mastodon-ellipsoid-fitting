@@ -3,6 +3,9 @@ package org.mastodon.fitting;
 import static org.mastodon.app.ui.ViewMenuBuilder.item;
 import static org.mastodon.app.ui.ViewMenuBuilder.menu;
 
+import bdv.util.Bounds;
+import bdv.viewer.ConverterSetups;
+import bdv.viewer.SourceAndConverter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -122,19 +125,18 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	private void fitSelectedVertices()
 	{
-		// TODO: parameters
-		final int setupId = 0;
+		// TODO: parameters to select which source to act on
+		final int sourceIndex = 0;
 
 //		System.out.println( "fitSelectedVertices()" );
 		if ( pluginAppModel != null )
 		{
 			final MamutAppModel appModel = pluginAppModel.getAppModel();
-			final AbstractSpimData< ? > spimData = appModel.getSharedBdvData().getSpimData();
-			final BasicSetupImgLoader< ? > imgLoader = spimData.getSequenceDescription().getImgLoader().getSetupImgLoader( setupId );
-			if ( !( imgLoader.getImageType() instanceof RealType ) )
+			final SourceAndConverter< ? > source = appModel.getSharedBdvData().getSources().get( sourceIndex );
+			if ( !( source.getSpimSource().getType() instanceof RealType ) )
 				throw new IllegalArgumentException( "Expected RealType image source" );
 
-			process( ( BasicSetupImgLoader ) imgLoader, setupId );
+			process( ( SourceAndConverter ) source );
 
 //			System.out.println( "fitSelectedVertices()" );
 		}
@@ -142,7 +144,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 
 	private static final boolean DEBUG = false;
 
-	private < T extends RealType< T > > void process( final BasicSetupImgLoader< T > imgLoader, final int setupId )
+	private < T extends RealType< T > > void process( final SourceAndConverter< T > source )
 	{
 		// TODO: parameters -----------------
 		final double smoothSigma = 2;
@@ -160,18 +162,16 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 		// ----------------------------------
 
 		final MamutAppModel appModel = pluginAppModel.getAppModel();
-		final AbstractSpimData< ? > spimData = appModel.getSharedBdvData().getSpimData();
-		final List< TimePoint > timePointsOrdered = spimData.getSequenceDescription().getTimePoints().getTimePointsOrdered();
-		final ViewRegistrations viewReg = spimData.getViewRegistrations();
 
 		final RefSet< Spot > vertices = appModel.getSelectionModel().getSelectedVertices();
 //		if ( vertices.isEmpty() )
 //			System.err.println( "no vertex selected" );
 
+		final AffineTransform3D sourceToGlobal = new AffineTransform3D();
 		for ( final Spot spot : vertices )
 		{
-			final int timepointId = timePointsOrdered.get( spot.getTimepoint() ).getId();
-			final AffineTransform3D sourceToGlobal = viewReg.getViewRegistration( timepointId, setupId ).getModel();
+			final int timepoint = spot.getTimepoint();
+			source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
 
 			final double[] gCenter = new double[ 3 ];
 			final double[] lCenter = new double[ 3 ];
@@ -192,7 +192,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 				lMax[ d ] = ( long ) ( lCenter[ d ] + halfsize );
 			}
 
-			final RandomAccessibleInterval< T > cropped = Views.interval( Views.extendBorder( imgLoader.getImage( timepointId ) ), lMin, lMax );
+			final RandomAccessibleInterval< T > cropped = Views.interval( Views.extendBorder( source.getSpimSource().getSource( timepoint, 0 ) ), lMin, lMax );
 			final RandomAccessibleInterval< FloatType > converted = Converters.convert( cropped, new RealFloatConverter<>(), new FloatType() );
 
 			final RandomAccessibleInterval< FloatType > input;
@@ -218,10 +218,11 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 			if ( DEBUG )
 			{
 				final BdvStackSource< FloatType > inputSource = BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
-				final ConverterSetup cs = appModel.getSharedBdvData().getConverterSetups().get( setupId );
-				final MinMaxGroup mmg = appModel.getSharedBdvData().getSetupAssignments().getMinMaxGroup( cs );
+				final ConverterSetups setups = appModel.getSharedBdvData().getConverterSetups();
+				final ConverterSetup cs = setups.getConverterSetup( source );
+				final Bounds bounds = setups.getBounds().getBounds( cs );
 				inputSource.setDisplayRange( cs.getDisplayRangeMin(), cs.getDisplayRangeMax() );
-				inputSource.setDisplayRangeBounds( mmg.getRangeMin(), mmg.getRangeMax() );
+				inputSource.setDisplayRangeBounds( bounds.getMinBound(), bounds.getMaxBound() );
 				bdv = inputSource;
 			}
 
