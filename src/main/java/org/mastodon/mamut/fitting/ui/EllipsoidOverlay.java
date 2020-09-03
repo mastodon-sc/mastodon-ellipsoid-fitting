@@ -1,10 +1,12 @@
-package org.mastodon.fitting.ui;
+package org.mastodon.mamut.fitting.ui;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Ellipse2D;
 import java.util.ArrayList;
+
+import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
 
 import Jama.EigenvalueDecomposition;
 import Jama.Matrix;
@@ -13,7 +15,6 @@ import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.SphericalToCartesianTransform3D;
 import net.imglib2.util.LinAlgHelpers;
-import org.mastodon.fitting.ellipsoid.Ellipsoid;
 
 public class EllipsoidOverlay extends BdvOverlay
 {

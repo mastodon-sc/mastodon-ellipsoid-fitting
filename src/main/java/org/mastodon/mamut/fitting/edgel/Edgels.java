@@ -1,4 +1,4 @@
-package org.mastodon.fitting.edgel;
+package org.mastodon.mamut.fitting.edgel;
 
 import java.util.ArrayList;
 import java.util.Arrays;
