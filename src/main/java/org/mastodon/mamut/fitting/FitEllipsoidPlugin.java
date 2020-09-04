@@ -1,5 +1,6 @@
 package org.mastodon.mamut.fitting;
 
+
 import static org.mastodon.app.ui.ViewMenuBuilder.item;
 import static org.mastodon.app.ui.ViewMenuBuilder.menu;
 
