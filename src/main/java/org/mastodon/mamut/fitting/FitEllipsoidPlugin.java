@@ -199,10 +199,11 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 					sigmas[ d ] = smoothSigma / scale[ d ];
 				try
 				{
-					Gauss3.gauss( sigmas, Views.zeroMin( converted ), img );
+					Gauss3.gauss( sigmas, Views.extendMirrorSingle( Views.zeroMin( converted ) ), img );
 				}
 				catch ( final IncompatibleTypeException e )
 				{
+					e.printStackTrace();
 				}
 				input = Views.translate( img, lMin );
 			}
@@ -285,7 +286,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		new Context().inject( mastodon );
 		mastodon.run();
 
-		final MamutProject project = new MamutProjectIO().load( "/Users/pietzsch/Desktop/Mastodon/testdata/MaMut_Parhyale_demo" );
+		final MamutProject project = new MamutProjectIO().load( "../mastodon/samples/drosophila_crop.mastodon" );
 		mastodon.openProject( project );
 	}
 }
