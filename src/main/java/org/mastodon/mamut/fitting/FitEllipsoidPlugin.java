@@ -1,11 +1,9 @@
-package org.mastodon.fitting;
+package org.mastodon.mamut.fitting;
+
 
 import static org.mastodon.app.ui.ViewMenuBuilder.item;
 import static org.mastodon.app.ui.ViewMenuBuilder.menu;
 
-import bdv.util.Bounds;
-import bdv.viewer.ConverterSetups;
-import bdv.viewer.SourceAndConverter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -16,6 +14,35 @@ import java.util.function.BiConsumer;
 
 import javax.swing.UIManager;
 
+import org.mastodon.app.ui.ViewMenuBuilder;
+import org.mastodon.collection.RefSet;
+import org.mastodon.mamut.MamutAppModel;
+import org.mastodon.mamut.Mastodon;
+import org.mastodon.mamut.fitting.edgel.Edgels;
+import org.mastodon.mamut.fitting.edgel.SampleEllipsoidEdgel;
+import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
+import org.mastodon.mamut.fitting.ui.EdgelsOverlay;
+import org.mastodon.mamut.fitting.ui.EllipsoidOverlay;
+import org.mastodon.mamut.model.Spot;
+import org.mastodon.mamut.plugin.MamutPlugin;
+import org.mastodon.mamut.plugin.MamutPluginAppModel;
+import org.mastodon.mamut.project.MamutProject;
+import org.mastodon.mamut.project.MamutProjectIO;
+import org.scijava.AbstractContextual;
+import org.scijava.Context;
+import org.scijava.plugin.Plugin;
+import org.scijava.ui.behaviour.util.AbstractNamedAction;
+import org.scijava.ui.behaviour.util.Actions;
+import org.scijava.ui.behaviour.util.RunnableAction;
+
+import bdv.tools.brightness.ConverterSetup;
+import bdv.util.Affine3DHelpers;
+import bdv.util.Bdv;
+import bdv.util.BdvFunctions;
+import bdv.util.BdvStackSource;
+import bdv.util.Bounds;
+import bdv.viewer.ConverterSetups;
+import bdv.viewer.SourceAndConverter;
 import net.imglib2.EuclideanSpace;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
@@ -32,40 +59,8 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 
-import org.mastodon.app.ui.ViewMenuBuilder;
-import org.mastodon.collection.RefSet;
-import org.mastodon.fitting.edgel.Edgels;
-import org.mastodon.fitting.edgel.SampleEllipsoidEdgel;
-import org.mastodon.fitting.ellipsoid.Ellipsoid;
-import org.mastodon.fitting.ui.EdgelsOverlay;
-import org.mastodon.fitting.ui.EllipsoidOverlay;
-import org.mastodon.plugin.MastodonPlugin;
-import org.mastodon.plugin.MastodonPluginAppModel;
-import org.mastodon.project.MamutProject;
-import org.mastodon.project.MamutProjectIO;
-import org.mastodon.revised.mamut.MamutAppModel;
-import org.mastodon.revised.mamut.Mastodon;
-import org.mastodon.revised.model.mamut.Spot;
-import org.scijava.AbstractContextual;
-import org.scijava.Context;
-import org.scijava.plugin.Plugin;
-import org.scijava.ui.behaviour.util.AbstractNamedAction;
-import org.scijava.ui.behaviour.util.Actions;
-import org.scijava.ui.behaviour.util.RunnableAction;
-
-import bdv.tools.brightness.ConverterSetup;
-import bdv.tools.brightness.MinMaxGroup;
-import bdv.util.Affine3DHelpers;
-import bdv.util.Bdv;
-import bdv.util.BdvFunctions;
-import bdv.util.BdvStackSource;
-import mpicbg.spim.data.generic.AbstractSpimData;
-import mpicbg.spim.data.generic.sequence.BasicSetupImgLoader;
-import mpicbg.spim.data.registration.ViewRegistrations;
-import mpicbg.spim.data.sequence.TimePoint;
-
 @Plugin( type = FitEllipsoidPlugin.class )
-public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPlugin
+public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugin
 {
 	private static final String FIT_SELECTED_VERTICES = "[ellipsoid fitting] fit selected vertices";
 
@@ -80,7 +75,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 
 	private final AbstractNamedAction fitSelectedVerticesAction;
 
-	private MastodonPluginAppModel pluginAppModel;
+	private MamutPluginAppModel pluginAppModel;
 
 	public FitEllipsoidPlugin()
 	{
@@ -89,7 +84,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 	}
 
 	@Override
-	public void setAppModel( final MastodonPluginAppModel model )
+	public void setAppPluginModel( final MamutPluginAppModel model )
 	{
 		this.pluginAppModel = model;
 		updateEnabledActions();
@@ -204,10 +199,11 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 					sigmas[ d ] = smoothSigma / scale[ d ];
 				try
 				{
-					Gauss3.gauss( sigmas, Views.zeroMin( converted ), img );
+					Gauss3.gauss( sigmas, Views.extendMirrorSingle( Views.zeroMin( converted ) ), img );
 				}
 				catch ( final IncompatibleTypeException e )
 				{
+					e.printStackTrace();
 				}
 				input = Views.translate( img, lMin );
 			}
@@ -290,7 +286,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MastodonPl
 		new Context().inject( mastodon );
 		mastodon.run();
 
-		final MamutProject project = new MamutProjectIO().load( "/Users/pietzsch/Desktop/Mastodon/testdata/MaMut_Parhyale_demo" );
+		final MamutProject project = new MamutProjectIO().load( "../mastodon/samples/drosophila_crop.mastodon" );
 		mastodon.openProject( project );
 	}
 }

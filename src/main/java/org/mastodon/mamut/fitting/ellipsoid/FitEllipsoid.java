@@ -1,4 +1,4 @@
-package org.mastodon.fitting.ellipsoid;
+package org.mastodon.mamut.fitting.ellipsoid;
 
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;

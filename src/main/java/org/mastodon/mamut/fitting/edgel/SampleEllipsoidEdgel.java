@@ -1,17 +1,19 @@
-package org.mastodon.fitting.edgel;
+package org.mastodon.mamut.fitting.edgel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+
+import org.mastodon.mamut.fitting.ellipsoid.DistPointHyperEllipsoid;
+import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
+import org.mastodon.mamut.fitting.ellipsoid.FitEllipsoid;
+import org.mastodon.mamut.fitting.ellipsoid.HyperEllipsoid;
+import org.mastodon.mamut.fitting.ellipsoid.DistPointHyperEllipsoid.Result;
+
 import net.imglib2.algorithm.edge.Edgel;
 import net.imglib2.util.LinAlgHelpers;
-import org.mastodon.fitting.ellipsoid.DistPointHyperEllipsoid;
-import org.mastodon.fitting.ellipsoid.DistPointHyperEllipsoid.Result;
-import org.mastodon.fitting.ellipsoid.Ellipsoid;
-import org.mastodon.fitting.ellipsoid.FitEllipsoid;
-import org.mastodon.fitting.ellipsoid.HyperEllipsoid;
 
 public class SampleEllipsoidEdgel
 {

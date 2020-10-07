@@ -1,4 +1,4 @@
-package org.mastodon.fitting.ellipsoid;
+package org.mastodon.mamut.fitting.ellipsoid;
 
 import Jama.EigenvalueDecomposition;
 import Jama.Matrix;

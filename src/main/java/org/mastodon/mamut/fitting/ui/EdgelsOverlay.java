@@ -1,4 +1,4 @@
-package org.mastodon.fitting.ui;
+package org.mastodon.mamut.fitting.ui;
 
 import java.awt.Color;
 import java.awt.Graphics2D;

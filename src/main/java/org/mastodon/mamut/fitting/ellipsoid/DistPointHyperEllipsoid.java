@@ -1,4 +1,4 @@
-package org.mastodon.fitting.ellipsoid;
+package org.mastodon.mamut.fitting.ellipsoid;
 
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealPoint;
