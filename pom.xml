@@ -3,9 +3,9 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.mastodon</groupId>
-		<artifactId>pom-mastodon</artifactId>
-		<version>1.0.0-beta-1-SNAPSHOT</version>
+		<groupId>org.scijava</groupId>
+		<artifactId>pom-scijava</artifactId>
+		<version>29.2.1</version>
 	</parent>
 
 	<artifactId>mastodon-ellipsoid-fitting</artifactId>
@@ -46,20 +46,23 @@
 		<!-- Mastodon deps -->
 
 		<dependency>
-			<groupId>${mastodon.group}</groupId>
+			<groupId>org.mastodon</groupId>
 			<artifactId>mastodon</artifactId>
+			<version>${mastodon.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>${mastodon.group}</groupId>
+			<groupId>org.mastodon</groupId>
 			<artifactId>mastodon-collection</artifactId>
+			<version>${mastodon-collection.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>${mastodon.group}</groupId>
+			<groupId>org.mastodon</groupId>
 			<artifactId>mastodon-graph</artifactId>
+			<version>${mastodon-graph.version}</version>
 		</dependency>
 
 		<!-- ImgLib2 deps -->
-
+		
 		<dependency>
 			<groupId>net.imglib2</groupId>
 			<artifactId>imglib2</artifactId>
@@ -70,7 +73,7 @@
 		</dependency>
 
 		<!-- SciJava deps -->
-
+		
 		<dependency>
 			<groupId>org.scijava</groupId>
 			<artifactId>scijava-common</artifactId>
@@ -80,18 +83,15 @@
 			<artifactId>ui-behaviour</artifactId>
 		</dependency>
 
-
-
 		<!-- Scifio deps -->
-
+		
 		<dependency>
 			<groupId>io.scif</groupId>
 			<artifactId>scifio</artifactId>
 		</dependency>
 
-
-
 		<!-- Test dependencies -->
+		
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
@@ -129,6 +129,10 @@
 		<license.projectName>mastodon-ellipsoid-fitting</license.projectName>
 		<license.organizationName>Mastodon authors</license.organizationName>
 		<license.copyrightOwners>Tobias Pietzsch, Jean-Yves Tinevez</license.copyrightOwners>
+
+		<mastodon-collection.version>1.0.0-beta-19</mastodon-collection.version>
+		<mastodon-graph.version>1.0.0-beta-18</mastodon-graph.version>
+		<mastodon.version>1.0.0-beta-17-SNAPSHOT</mastodon.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>deploy-to-scijava</releaseProfiles>
