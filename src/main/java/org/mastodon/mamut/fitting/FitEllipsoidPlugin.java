@@ -8,16 +8,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiConsumer;
-
-import javax.swing.UIManager;
 
 import org.mastodon.app.ui.ViewMenuBuilder;
 import org.mastodon.collection.RefSet;
 import org.mastodon.mamut.MamutAppModel;
-import org.mastodon.mamut.Mastodon;
 import org.mastodon.mamut.fitting.edgel.Edgels;
 import org.mastodon.mamut.fitting.edgel.SampleEllipsoidEdgel;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
@@ -26,10 +22,7 @@ import org.mastodon.mamut.fitting.ui.EllipsoidOverlay;
 import org.mastodon.mamut.model.Spot;
 import org.mastodon.mamut.plugin.MamutPlugin;
 import org.mastodon.mamut.plugin.MamutPluginAppModel;
-import org.mastodon.mamut.project.MamutProject;
-import org.mastodon.mamut.project.MamutProjectIO;
 import org.scijava.AbstractContextual;
-import org.scijava.Context;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.behaviour.util.AbstractNamedAction;
 import org.scijava.ui.behaviour.util.Actions;
@@ -275,18 +268,5 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		final long[] a = new long[ t.numDimensions() ];
 		get.accept( t, a );
 		return a;
-	}
-
-	public static void main( final String[] args ) throws Exception
-	{
-		Locale.setDefault( Locale.US );
-		UIManager.setLookAndFeel( UIManager.getSystemLookAndFeelClassName() );
-
-		final Mastodon mastodon = new Mastodon();
-		new Context().inject( mastodon );
-		mastodon.run();
-
-		final MamutProject project = new MamutProjectIO().load( "../mastodon/samples/drosophila_crop.mastodon" );
-		mastodon.openProject( project );
 	}
 }
