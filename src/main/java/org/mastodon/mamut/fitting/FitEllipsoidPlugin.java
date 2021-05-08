@@ -60,7 +60,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 {
 	private static final String FIT_SELECTED_VERTICES = "[ellipsoid fitting] fit selected vertices";
 
-	private static final String[] FIT_SELECTED_VERTICES_KEYS = new String[] { "meta F" };
+	private static final String[] FIT_SELECTED_VERTICES_KEYS = new String[] { "meta F", "alt F" };
 
 	private static Map< String, String > menuTexts = new HashMap<>();
 
