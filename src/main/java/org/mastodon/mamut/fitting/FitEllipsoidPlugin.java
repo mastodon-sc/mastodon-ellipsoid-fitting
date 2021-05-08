@@ -22,6 +22,9 @@ import org.mastodon.mamut.fitting.ui.EllipsoidOverlay;
 import org.mastodon.mamut.model.Spot;
 import org.mastodon.mamut.plugin.MamutPlugin;
 import org.mastodon.mamut.plugin.MamutPluginAppModel;
+import org.mastodon.ui.keymap.CommandDescriptionProvider;
+import org.mastodon.ui.keymap.CommandDescriptions;
+import org.mastodon.ui.keymap.KeyConfigContexts;
 import org.scijava.AbstractContextual;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.behaviour.util.AbstractNamedAction;
@@ -64,6 +67,27 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	static
 	{
 		menuTexts.put( FIT_SELECTED_VERTICES, "Fit Selected Vertices" );
+	}
+
+	/*
+	 * Command description.
+	 */
+	@Plugin( type = Descriptions.class )
+	public static class Descriptions extends CommandDescriptionProvider
+	{
+		public Descriptions()
+		{
+			super( KeyConfigContexts.MASTODON );
+		}
+
+		@Override
+		public void getCommandDescriptions( final CommandDescriptions descriptions )
+		{
+			descriptions.add(
+					FIT_SELECTED_VERTICES,
+					FIT_SELECTED_VERTICES_KEYS,
+					"Fit the currently selected spots to ellipsoids that best wrap bright pixels in the first source." );
+		}
 	}
 
 	private final AbstractNamedAction fitSelectedVerticesAction;
