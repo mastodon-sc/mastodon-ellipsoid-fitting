@@ -116,7 +116,7 @@
 	<properties>
 		<package-name>org.mastodon</package-name>
 
-		<license.licenseName>not licensed yet</license.licenseName>
+		<license.licenseName>bsd_2</license.licenseName>
 		<license.projectName>mastodon-ellipsoid-fitting</license.projectName>
 		<license.organizationName>Mastodon authors</license.organizationName>
 		<license.copyrightOwners>Tobias Pietzsch, Jean-Yves Tinevez</license.copyrightOwners>
