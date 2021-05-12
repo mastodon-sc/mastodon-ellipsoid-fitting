@@ -51,16 +51,6 @@
 			<artifactId>mastodon</artifactId>
 			<version>${mastodon.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>org.mastodon</groupId>
-			<artifactId>mastodon-collection</artifactId>
-			<version>${mastodon-collection.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.mastodon</groupId>
-			<artifactId>mastodon-graph</artifactId>
-			<version>${mastodon-graph.version}</version>
-		</dependency>
 
 		<!-- ImgLib2 deps -->
 		
@@ -131,9 +121,7 @@
 		<license.organizationName>Mastodon authors</license.organizationName>
 		<license.copyrightOwners>Tobias Pietzsch, Jean-Yves Tinevez</license.copyrightOwners>
 
-		<mastodon-collection.version>1.0.0-beta-19</mastodon-collection.version>
-		<mastodon-graph.version>1.0.0-beta-18</mastodon-graph.version>
-		<mastodon.version>1.0.0-beta-18-SNAPSHOT</mastodon.version>
+		<mastodon.version>1.0.0-beta-18</mastodon.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>deploy-to-scijava</releaseProfiles>
