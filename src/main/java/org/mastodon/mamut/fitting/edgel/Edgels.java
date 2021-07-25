@@ -77,8 +77,10 @@ public class Edgels
 	 * @param expectedCenter
 	 *            expected ellipsoid center
 	 * @param maxAngle
+	 *            the max angle to test.
 	 * @param maxFactor
-	 * @return
+	 *            the max factor.
+	 * @return a new list.
 	 */
 	public static ArrayList< Edgel > filterEdgelsByOcclusion(
 			final List< Edgel > edgels,

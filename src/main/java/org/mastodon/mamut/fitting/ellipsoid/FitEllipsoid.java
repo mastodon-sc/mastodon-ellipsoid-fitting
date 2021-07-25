@@ -47,9 +47,12 @@ public class FitEllipsoid
 	 * + 2<i>Fyz</i> + 2<i>Gx</i> + 2<i>Hy</i> + 2<i>Iz</i> = 1 <br>
 	 * To an n * 3 array of coordinates.
 	 * </p>
+	 * 
+	 * @param points
+	 *            the 2D array of the points to fit.
+	 * @return a new {@link Ellipsoid} object.
 	 *
-	 * @see <p>
-	 *      <a href=
+	 * @see <a href=
 	 *      "http://www.mathworks.com/matlabcentral/fileexchange/24693-ellipsoid-fit"
 	 *      >MATLAB script</a>
 	 *      </p>

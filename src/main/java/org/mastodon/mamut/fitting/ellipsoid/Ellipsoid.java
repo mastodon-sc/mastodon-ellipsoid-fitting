@@ -45,9 +45,13 @@ public class Ellipsoid extends HyperEllipsoid
 	 * @param center
 	 *            coordinates of center. must not be {@code null}.
 	 * @param covariance
+	 *            the covariance of the ellipsoid.
 	 * @param precision
+	 *            the precision of the ellipsoid.
 	 * @param axes
+	 *            the axes of the ellipsoid.
 	 * @param radii
+	 *            the radii of the ellipsoid.
 	 */
 	public Ellipsoid( final double[] center, final double[][] covariance, final double[][] precision, final double[][] axes, final double[] radii )
 	{
