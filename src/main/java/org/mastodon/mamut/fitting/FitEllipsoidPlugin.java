@@ -184,6 +184,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 	private static final boolean DEBUG = false;
 
+	@SuppressWarnings( "unused" )
 	private < T extends RealType< T > > void process( final SourceAndConverter< T > source )
 	{
 		// TODO: parameters -----------------
