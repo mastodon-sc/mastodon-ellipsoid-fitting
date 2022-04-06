@@ -1,2 +1,2 @@
-[![](https://travis-ci.com/mastodon-sc/mastodon-ellipsoid-fitting.svg?branch=master)](https://travis-ci.com/mastodon-sc/mastodon-ellipsoid-fitting)
+[![](https://github.com/mastodon-sc/mastodon-ellipsoid-fitting/actions/workflows/build-main.yml/badge.svg)](https://github.com/mastodon-sc/mastodon-ellipsoid-fitting/actions/workflows/build-main.yml)
 
