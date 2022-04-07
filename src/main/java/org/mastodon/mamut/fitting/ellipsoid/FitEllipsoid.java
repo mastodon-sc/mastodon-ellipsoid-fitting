@@ -55,7 +55,6 @@ public class FitEllipsoid
 	 * @see <a href=
 	 *      "http://www.mathworks.com/matlabcentral/fileexchange/24693-ellipsoid-fit"
 	 *      >MATLAB script</a>
-	 *      </p>
 	 */
 	public static Ellipsoid yuryPetrov( final double[][] points )
 	{
