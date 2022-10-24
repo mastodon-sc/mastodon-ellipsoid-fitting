@@ -10,7 +10,7 @@
 
 	<groupId>org.mastodon</groupId>
 	<artifactId>mastodon-ellipsoid-fitting</artifactId>
-	<version>0.3.2-SNAPSHOT</version>
+	<version>0.3.3-SNAPSHOT</version>
 
 	<name>Mastodon Ellipsoid Fitting</name>
 	<description>Mastodon plugin for fitting ellipsoids around spots</description>
