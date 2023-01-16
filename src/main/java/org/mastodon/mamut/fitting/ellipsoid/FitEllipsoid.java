@@ -32,6 +32,8 @@ import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 import net.imglib2.util.LinAlgHelpers;
 
+import javax.annotation.Nullable;
+
 /**
  * Adapted from BoneJ's FitEllipsoid.
  *
@@ -56,7 +58,8 @@ public class FitEllipsoid
 	 *      "http://www.mathworks.com/matlabcentral/fileexchange/24693-ellipsoid-fit"
 	 *      >MATLAB script</a>
 	 */
-	public static Ellipsoid yuryPetrov( final double[][] points )
+	@Nullable
+	public static Ellipsoid yuryPetrov( final double[][] points ) throws IllegalArgumentException
 	{
 		final int nPoints = points.length;
 		if ( nPoints < 9 )
@@ -83,6 +86,12 @@ public class FitEllipsoid
 
 		final double[][] DTD = new double[ 9 ][ 9 ];
 		LinAlgHelpers.multATB( d, d, DTD );
+		CholeskyDecomposition choleskyDecomposition = new CholeskyDecomposition( new Matrix( DTD ) );
+
+		// symmetric, positive, definite?
+		if ( !choleskyDecomposition.isSPD() )
+			// in this case, ellipsoid fitting is not possible
+			return null;
 		final Matrix V = new CholeskyDecomposition( new Matrix( DTD ) ).solve( new Matrix( b ) );
 		return ellipsoidFromEquation( V );
 	}
