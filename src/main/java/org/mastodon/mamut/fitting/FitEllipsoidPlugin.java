@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
+import org.apache.commons.lang3.time.StopWatch;
 import org.mastodon.app.ui.ViewMenuBuilder;
 import org.mastodon.collection.RefSet;
 import org.mastodon.mamut.MamutAppModel;
@@ -168,7 +169,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		// TODO: parameters to select which source to act on
 		final int sourceIndex = 0;
 
-//		System.out.println( "fitSelectedVertices()" );
+		//		System.out.println( "fitSelectedVertices()" );
 		if ( pluginAppModel != null )
 		{
 			final MamutAppModel appModel = pluginAppModel.getAppModel();
@@ -178,7 +179,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 			process( ( SourceAndConverter ) source );
 
-//			System.out.println( "fitSelectedVertices()" );
+			//			System.out.println( "fitSelectedVertices()" );
 		}
 	}
 
@@ -205,19 +206,23 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		final MamutAppModel appModel = pluginAppModel.getAppModel();
 
 		final RefSet< Spot > vertices = appModel.getSelectionModel().getSelectedVertices();
-//		if ( vertices.isEmpty() )
-//			System.err.println( "no vertex selected" );
+		//		if ( vertices.isEmpty() )
+		//			System.err.println( "no vertex selected" );
 
 		final AffineTransform3D sourceToGlobal = new AffineTransform3D();
+		int found = 0;
+		int notFound = 0;
+		StopWatch watch = new StopWatch();
+		watch.start();
 		for ( final Spot spot : vertices )
 		{
 			final int timepoint = spot.getTimepoint();
 			source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
 
-			final double[] gCenter = new double[ 3 ];
-			final double[] lCenter = new double[ 3 ];
-			spot.localize( gCenter );
-			sourceToGlobal.applyInverse( lCenter, gCenter );
+			final double[] centerInGlobalCoordinates = new double[ 3 ];
+			final double[] centerInLocalCoordinates = new double[ 3 ];
+			spot.localize( centerInGlobalCoordinates );
+			sourceToGlobal.applyInverse( centerInLocalCoordinates, centerInGlobalCoordinates );
 
 			final double[] scale = new double[ 3 ];
 			for ( int d = 0; d < 3; ++d )
@@ -225,21 +230,28 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 			final long[] lMin = new long[ 3 ];
 			final long[] lMax = new long[ 3 ];
+
 			final double radius = Math.sqrt( spot.getBoundingSphereRadiusSquared() );
 			for ( int d = 0; d < 3; ++d )
 			{
 				final double halfsize = 2 * radius / scale[ d ] + 2;
-				lMin[ d ] = ( long ) ( lCenter[ d ] - halfsize );
-				lMax[ d ] = ( long ) ( lCenter[ d ] + halfsize );
+				lMin[ d ] = ( long ) ( centerInLocalCoordinates[ d ] - halfsize );
+				lMax[ d ] = ( long ) ( centerInLocalCoordinates[ d ] + halfsize );
 			}
+			// System.out.println( "radius: " + radius );
 
-			final RandomAccessibleInterval< T > cropped = Views.interval( Views.extendBorder( source.getSpimSource().getSource( timepoint, 0 ) ), lMin, lMax );
-			final RandomAccessibleInterval< FloatType > converted = Converters.convert( cropped, new RealFloatConverter<>(), new FloatType() );
+			final RandomAccessibleInterval< T > cropped = Views
+					.interval( Views.extendBorder( source.getSpimSource().getSource( timepoint, 0 ) ), lMin, lMax );
+			final RandomAccessibleInterval< FloatType > converted =
+					Converters.convert( cropped, new RealFloatConverter<>(), new FloatType() );
 
 			final RandomAccessibleInterval< FloatType > input;
 			if ( smoothSigma > 0 )
 			{
-				final RandomAccessibleInterval< FloatType > img = ArrayImgs.floats( longArrayFrom( cropped, Interval::dimensions ) );
+				long[] widthHeightDepth = longArrayFrom( cropped, Interval::dimensions );
+				//System.out.println( "widthHeightDepth: " + widthHeightDepth[ 0 ] + " " + widthHeightDepth[ 1 ] + " "
+				//		+ widthHeightDepth[ 2 ] + ", spot: " + spot.getLabel() );
+				final RandomAccessibleInterval< FloatType > img = ArrayImgs.floats( widthHeightDepth );
 				final double[] sigmas = new double[ 3 ];
 				for ( int d = 0; d < 3; ++d )
 					sigmas[ d ] = smoothSigma / scale[ d ];
@@ -259,7 +271,8 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			Bdv bdv;
 			if ( DEBUG )
 			{
-				final BdvStackSource< FloatType > inputSource = BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
+				final BdvStackSource< FloatType > inputSource =
+						BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
 				final ConverterSetups setups = appModel.getSharedBdvData().getConverterSetups();
 				final ConverterSetup cs = setups.getConverterSetup( source );
 				final Bounds bounds = setups.getBounds().getBounds( cs );
@@ -269,13 +282,15 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			}
 
 			final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ),
-					new ArrayImgFactory<>(new FloatType()), minGradientMagnitude );
+					new ArrayImgFactory<>( new FloatType() ), minGradientMagnitude );
 			final AffineTransform3D zeroMinSourceToGlobal = sourceToGlobal.copy();
 			final AffineTransform3D shiftToMin = new AffineTransform3D();
 			shiftToMin.translate( lMin[ 0 ], lMin[ 1 ], lMin[ 2 ] );
 			zeroMinSourceToGlobal.concatenate( shiftToMin );
 			final ArrayList< Edgel > gEdgels = Edgels.transformEdgels( lEdgels, zeroMinSourceToGlobal );
-			final ArrayList< Edgel > filteredEdgels = Edgels.filterEdgelsByOcclusion( Edgels.filterEdgelsByDirection( gEdgels, gCenter ), gCenter, maxAngle, maxFactor );
+			final ArrayList< Edgel > filteredEdgels = Edgels.filterEdgelsByOcclusion(
+					Edgels.filterEdgelsByDirection( gEdgels, centerInGlobalCoordinates ), centerInGlobalCoordinates,
+					maxAngle, maxFactor );
 
 			EdgelsOverlay edgelsOverlay;
 			if ( DEBUG )
@@ -287,20 +302,30 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			final long t1 = System.currentTimeMillis();
 			final Ellipsoid ellipsoid = SampleEllipsoidEdgel.sample(
 					filteredEdgels,
-					gCenter,
+					centerInGlobalCoordinates,
 					numSamples,
 					outsideCutoffDistance,
 					insideCutoffDistance,
 					angleCutoffDistance,
 					maxCenterDistance );
-			if ( ellipsoid == null )
-				return;
 			final long t2 = System.currentTimeMillis();
-//			System.out.println( t2 - t1 );
+
+			if ( ellipsoid == null )
+			{
+				notFound++;
+				// System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
+				continue;
+			}
+			else
+			{
+				found++;
+				// System.out.println( "Computed ellipsoid in " + ( t2 - t1 ) + "ms. Ellipsoid: " + ellipsoid );
+			}
 
 			if ( DEBUG )
 			{
-				BdvFunctions.showOverlay( new EllipsoidOverlay( ellipsoid ), "fitted ellipsoid", Bdv.options().addTo( bdv ) );
+				BdvFunctions.showOverlay( new EllipsoidOverlay( ellipsoid ), "fitted ellipsoid",
+						Bdv.options().addTo( bdv ) );
 				final Map< Edgel, Double > costs = SampleEllipsoidEdgel.getCosts(
 						filteredEdgels,
 						ellipsoid,
@@ -310,9 +335,18 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				edgelsOverlay.setCosts( costs );
 			}
 
+			if ( ( found + notFound ) % 100 == 0 )
+				System.out.println( "Computed " + ( found + notFound ) + " of " + vertices.size() + " ellipsoids ("
+						+ Math.round( ( found + notFound ) / ( double ) vertices.size() * 100d ) + "%). Total time: "
+						+ watch.formatTime() );
+
 			spot.setPosition( ellipsoid );
 			spot.setCovariance( ellipsoid.getCovariance() );
 		}
+		System.out.println( "found: " + found + " (" + Math.round( ( double ) found / ( found + notFound ) * 100d )
+				+ "%), not found: " + notFound + " (" + Math.round( ( double ) notFound / ( found + notFound ) * 100d )
+				+ "%), total time: " + watch.formatTime()
+				+ ", time per spot: " + ( int ) ( ( double ) watch.getTime() / ( found + notFound ) ) + "ms." );
 	}
 
 	// TODO: move to imglib2 core and make versions for int[], double[] ???

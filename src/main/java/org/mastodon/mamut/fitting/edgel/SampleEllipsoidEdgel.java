@@ -69,6 +69,11 @@ public class SampleEllipsoidEdgel
 			final double angleCutoffDistance,
 			final double maxCenterDistance )
 	{
+		if ( edgels.size() == 0 )
+		{
+			// System.out.println( "No edgels." );
+			return null;
+		}
 		final int numPointsPerSample = 9;
 
 		final Cost costFunction = new EdgelDistanceCost( outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance );
@@ -96,7 +101,13 @@ public class SampleEllipsoidEdgel
 				}
 				final Ellipsoid ellipsoid = FitEllipsoid.yuryPetrov( coordinates );
 
-				// don't count degenerate samples
+				// skip samples that cannot be fitted to an ellipsoid
+				if ( ellipsoid == null )
+				{
+					--sample;
+					continue;
+				}
+				// skip degenerate samples
 				final double[] radii = ellipsoid.getRadii();
 				if ( Double.isNaN( radii[ 0 ] ) || Double.isNaN( radii[ 1 ] ) || Double.isNaN( radii[ 2 ] ) )
 				{
@@ -118,25 +129,32 @@ public class SampleEllipsoidEdgel
 			}
 			catch ( final IllegalArgumentException e )
 			{
-//				e.printStackTrace();
-//				System.out.println( "oops" );
+				// e.printStackTrace();
+				// System.out.println( "oops" );
 			}
 			catch ( final RuntimeException e )
 			{
-//				System.out.println( "psd" );
+				// e.printStackTrace();
+				// System.out.println( "spd" );
 			}
 		}
 
 		if ( bestEllipsoid == null )
-			return null;
-
-		final Ellipsoid refined = fitToInliers( bestEllipsoid, edgels, outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance );
-		if ( refined == null )
 		{
-//			System.err.println( "refined ellipsoid == null! This shouldn't happen!");
+			// System.out.println( "no best ellipsoid. potential reason: center of best ellipsoid too far from expected center." );
+			return null;
+		}
+
+		try
+		{
+			// refined ellipsoid
+			return fitToInliers( bestEllipsoid, edgels, outsideCutoffDistance, insideCutoffDistance,
+					angleCutoffDistance );
+		}
+		catch ( final IllegalArgumentException e )
+		{
 			return bestEllipsoid;
 		}
-		return refined;
 	}
 
 	public static Ellipsoid fitToInliers(
@@ -144,7 +162,7 @@ public class SampleEllipsoidEdgel
 			final List< Edgel > edgels,
 			final double outsideCutoffDistance,
 			final double insideCutoffDistance,
-			final double angleCutoffDistance )
+			final double angleCutoffDistance ) throws IllegalArgumentException
 	{
 		final ArrayList< Edgel > inliers = new ArrayList<>();
 		final Cost costFunction = new EdgelDistanceCost( outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance );
@@ -156,8 +174,7 @@ public class SampleEllipsoidEdgel
 		for ( int i = 0; i < inliers.size(); ++i )
 			inliers.get( i ).localize( coordinates[ i ] );
 
-		final Ellipsoid ellipsoid = FitEllipsoid.yuryPetrov( coordinates );
-		return ellipsoid;
+		return FitEllipsoid.yuryPetrov( coordinates );
 	}
 
 	interface Cost
