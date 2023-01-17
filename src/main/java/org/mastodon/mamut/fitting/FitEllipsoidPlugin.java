@@ -37,6 +37,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 
 import org.apache.commons.lang3.time.StopWatch;
@@ -92,6 +95,12 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	private static final String[] FIT_SELECTED_VERTICES_KEYS = new String[] { "meta F", "alt F" };
 
 	private static Map< String, String > menuTexts = new HashMap<>();
+
+	private final AtomicInteger found = new AtomicInteger( 0 );
+
+	private final AtomicInteger notFound = new AtomicInteger( 0 );
+
+	private final StopWatch watch = new StopWatch();
 
 	static
 	{
@@ -169,7 +178,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		// TODO: parameters to select which source to act on
 		final int sourceIndex = 0;
 
-		//		System.out.println( "fitSelectedVertices()" );
 		if ( pluginAppModel != null )
 		{
 			final MamutAppModel appModel = pluginAppModel.getAppModel();
@@ -178,8 +186,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				throw new IllegalArgumentException( "Expected RealType image source" );
 
 			process( ( SourceAndConverter ) source );
-
-			//			System.out.println( "fitSelectedVertices()" );
 		}
 	}
 
@@ -188,34 +194,103 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	@SuppressWarnings( "unused" )
 	private < T extends RealType< T > > void process( final SourceAndConverter< T > source )
 	{
-		// TODO: parameters -----------------
-		final double smoothSigma = 2;
-
-		final double minGradientMagnitude = 10;
-
-		final double maxAngle = 5 * Math.PI / 180.0;
-		final double maxFactor = 1.1;
-
-		final int numSamples = 100;
-		final double outsideCutoffDistance = 3;
-		final double insideCutoffDistance = 5;
-		final double angleCutoffDistance = 30 * Math.PI / 180.0;
-		final double maxCenterDistance = 10;
-		// ----------------------------------
-
 		final MamutAppModel appModel = pluginAppModel.getAppModel();
 
 		final RefSet< Spot > vertices = appModel.getSelectionModel().getSelectedVertices();
-		//		if ( vertices.isEmpty() )
-		//			System.err.println( "no vertex selected" );
+		if ( vertices.isEmpty() )
+			System.err.println( "no vertex selected" );
 
 		final AffineTransform3D sourceToGlobal = new AffineTransform3D();
-		int found = 0;
-		int notFound = 0;
-		StopWatch watch = new StopWatch();
-		watch.start();
+		// init watch and counters
+		{
+			watch.reset();
+			watch.start();
+			found.set( 0 );
+			notFound.set( 0 );
+		}
+
+		// Fixed thread number depending on the number of available processors
+		int processors = Runtime.getRuntime().availableProcessors();
+		ExecutorService executorService = Executors.newFixedThreadPool( processors );
+		List< Callable< Object > > todo = new ArrayList<>( vertices.size() );
+
+		// parallelize over vertices
 		for ( final Spot spot : vertices )
 		{
+			Spot spotCopy = appModel.getModel().getGraph().vertexRef();
+			spotCopy.refTo( spot );
+			todo.add( Executors.callable(
+					new SpotEllipsoidFittingTask<>( spotCopy, source, sourceToGlobal, appModel, vertices.size() ) ) );
+		}
+
+		// invoke all tasks
+		try
+		{
+			executorService.invokeAll( todo );
+		}
+		catch ( InterruptedException e )
+		{
+			e.printStackTrace();
+		}
+
+		System.out.println( "found: " + found.get() + " ("
+				+ Math.round( ( double ) found.get() / ( found.get() + notFound.get() ) * 100d )
+				+ "%), not found: " + notFound.get() + " ("
+				+ Math.round( ( double ) notFound.get() / ( found.get() + notFound.get() ) * 100d )
+				+ "%), total time: " + watch.formatTime()
+				+ ", time per spot: " + ( int ) ( ( double ) watch.getTime() / ( found.get() + notFound.get() ) )
+				+ "ms." );
+	}
+
+	// TODO: move to imglib2 core and make versions for int[], double[] ???
+	public static < T extends EuclideanSpace > long[] longArrayFrom( final T t, final BiConsumer< T, long[] > get )
+	{
+		final long[] a = new long[ t.numDimensions() ];
+		get.accept( t, a );
+		return a;
+	}
+
+	private class SpotEllipsoidFittingTask< T extends RealType< T > > implements Runnable
+	{
+		private final Spot spot;
+
+		private final SourceAndConverter< T > source;
+
+		private final AffineTransform3D sourceToGlobal;
+
+		private final MamutAppModel appModel;
+
+		private final int totalTasks;
+
+		public SpotEllipsoidFittingTask(
+				final Spot spot, final SourceAndConverter< T > source, final AffineTransform3D sourceToGlobal,
+				final MamutAppModel appModel, final int totalTasks )
+		{
+			this.spot = spot;
+			this.source = source;
+			this.sourceToGlobal = sourceToGlobal;
+			this.appModel = appModel;
+			this.totalTasks = totalTasks;
+		}
+
+		@Override
+		public void run()
+		{
+			// TODO: parameters -----------------
+			final double smoothSigma = 2;
+
+			final double minGradientMagnitude = 10;
+
+			final double maxAngle = 5 * Math.PI / 180.0;
+			final double maxFactor = 1.1;
+
+			final int numSamples = 1000;
+			final double outsideCutoffDistance = 3;
+			final double insideCutoffDistance = 5;
+			final double angleCutoffDistance = 30 * Math.PI / 180.0;
+			final double maxCenterDistance = 10;
+			// ----------------------------------
+
 			final int timepoint = spot.getTimepoint();
 			source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
 
@@ -238,7 +313,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				lMin[ d ] = ( long ) ( centerInLocalCoordinates[ d ] - halfsize );
 				lMax[ d ] = ( long ) ( centerInLocalCoordinates[ d ] + halfsize );
 			}
-			// System.out.println( "radius: " + radius );
 
 			final RandomAccessibleInterval< T > cropped = Views
 					.interval( Views.extendBorder( source.getSpimSource().getSource( timepoint, 0 ) ), lMin, lMax );
@@ -249,8 +323,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			if ( smoothSigma > 0 )
 			{
 				long[] widthHeightDepth = longArrayFrom( cropped, Interval::dimensions );
-				//System.out.println( "widthHeightDepth: " + widthHeightDepth[ 0 ] + " " + widthHeightDepth[ 1 ] + " "
-				//		+ widthHeightDepth[ 2 ] + ", spot: " + spot.getLabel() );
 				final RandomAccessibleInterval< FloatType > img = ArrayImgs.floats( widthHeightDepth );
 				final double[] sigmas = new double[ 3 ];
 				for ( int d = 0; d < 3; ++d )
@@ -312,14 +384,16 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 			if ( ellipsoid == null )
 			{
-				notFound++;
-				// System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
-				continue;
+				notFound.getAndIncrement();
+				if ( DEBUG )
+					System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
+				return;
 			}
 			else
 			{
-				found++;
-				// System.out.println( "Computed ellipsoid in " + ( t2 - t1 ) + "ms. Ellipsoid: " + ellipsoid );
+				found.getAndIncrement();
+				if ( DEBUG )
+					System.out.println( "Computed ellipsoid in " + ( t2 - t1 ) + "ms. Ellipsoid: " + ellipsoid );
 			}
 
 			if ( DEBUG )
@@ -335,25 +409,15 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				edgelsOverlay.setCosts( costs );
 			}
 
-			if ( ( found + notFound ) % 100 == 0 )
-				System.out.println( "Computed " + ( found + notFound ) + " of " + vertices.size() + " ellipsoids ("
-						+ Math.round( ( found + notFound ) / ( double ) vertices.size() * 100d ) + "%). Total time: "
-						+ watch.formatTime() );
+			if ( ( found.get() + notFound.get() ) % 1000 == 0 || ( found.get() + notFound.get() ) > 370_000 )
+				System.out
+						.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks + " ellipsoids ("
+								+ Math.round( ( found.get() + notFound.get() ) / ( double ) totalTasks * 100d )
+								+ "%). Total time: "
+								+ watch.formatTime() );
 
 			spot.setPosition( ellipsoid );
 			spot.setCovariance( ellipsoid.getCovariance() );
 		}
-		System.out.println( "found: " + found + " (" + Math.round( ( double ) found / ( found + notFound ) * 100d )
-				+ "%), not found: " + notFound + " (" + Math.round( ( double ) notFound / ( found + notFound ) * 100d )
-				+ "%), total time: " + watch.formatTime()
-				+ ", time per spot: " + ( int ) ( ( double ) watch.getTime() / ( found + notFound ) ) + "ms." );
-	}
-
-	// TODO: move to imglib2 core and make versions for int[], double[] ???
-	public static < T extends EuclideanSpace > long[] longArrayFrom( final T t, final BiConsumer< T, long[] > get )
-	{
-		final long[] a = new long[ t.numDimensions() ];
-		get.accept( t, a );
-		return a;
 	}
 }
