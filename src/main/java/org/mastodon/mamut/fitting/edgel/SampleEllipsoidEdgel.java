@@ -75,6 +75,12 @@ public class SampleEllipsoidEdgel
 			return null;
 		}
 		final int numPointsPerSample = 9;
+		if ( edgels.size() < numPointsPerSample )
+		{
+			System.out.println(
+					"Too few edgels. Required " + numPointsPerSample + " edgels, but got " + edgels.size() + "." );
+			return null;
+		}
 
 		final Cost costFunction = new EdgelDistanceCost( outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance );
 
