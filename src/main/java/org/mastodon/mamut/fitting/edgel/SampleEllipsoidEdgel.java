@@ -77,8 +77,8 @@ public class SampleEllipsoidEdgel
 		final int numPointsPerSample = 9;
 		if ( edgels.size() < numPointsPerSample )
 		{
-			System.out.println(
-					"Too few edgels. Required " + numPointsPerSample + " edgels, but got " + edgels.size() + "." );
+			// System.out.println(
+			//		"Too few edgels. Required " + numPointsPerSample + " edgels, but got " + edgels.size() + "." );
 			return null;
 		}
 
@@ -110,14 +110,12 @@ public class SampleEllipsoidEdgel
 				// skip samples that cannot be fitted to an ellipsoid
 				if ( ellipsoid == null )
 				{
-					//--sample;
 					continue;
 				}
 				// skip degenerate samples
 				final double[] radii = ellipsoid.getRadii();
 				if ( Double.isNaN( radii[ 0 ] ) || Double.isNaN( radii[ 1 ] ) || Double.isNaN( radii[ 2 ] ) )
 				{
-					//--sample;
 					continue;
 				}
 
