@@ -409,15 +409,29 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				edgelsOverlay.setCosts( costs );
 			}
 
-			if ( ( found.get() + notFound.get() ) % 1000 == 0 || ( found.get() + notFound.get() ) > 370_000 )
-				System.out
-						.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks + " ellipsoids ("
-								+ Math.round( ( found.get() + notFound.get() ) / ( double ) totalTasks * 100d )
-								+ "%). Total time: "
-								+ watch.formatTime() );
+			if ( DEBUG )
+			{
+				int outputRate = 1000;
+				if ( ( found.get() + notFound.get() ) % outputRate == 0 )
+					System.out
+							.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks
+									+ " ellipsoids ("
+									+ Math.round( ( found.get() + notFound.get() ) / ( double ) totalTasks * 100d )
+									+ "%). Total time: "
+									+ watch.formatTime() );
+			}
 
-			spot.setPosition( ellipsoid );
-			spot.setCovariance( ellipsoid.getCovariance() );
+			ReentrantReadWriteLock.WriteLock writeLock = appModel.getModel().getGraph().getLock().writeLock();
+			writeLock.lock();
+			try
+			{
+				spot.setPosition( ellipsoid );
+				spot.setCovariance( ellipsoid.getCovariance() );
+			}
+			finally
+			{
+				writeLock.unlock();
+			}
 		}
 	}
 }
