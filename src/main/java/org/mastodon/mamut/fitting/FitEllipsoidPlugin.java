@@ -284,6 +284,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			final double maxAngle = 5 * Math.PI / 180.0;
 			final double maxFactor = 1.1;
 
+			// TODO: test with different values, e.g. 100 and 1000 and see how many ellipsoids are found
 			final int numSamples = 1000;
 			final double outsideCutoffDistance = 3;
 			final double insideCutoffDistance = 5;
