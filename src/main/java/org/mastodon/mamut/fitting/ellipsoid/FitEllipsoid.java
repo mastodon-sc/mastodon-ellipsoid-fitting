@@ -92,7 +92,7 @@ public class FitEllipsoid
 		if ( !choleskyDecomposition.isSPD() )
 			// in this case, ellipsoid fitting is not possible
 			return null;
-		final Matrix V = new CholeskyDecomposition( new Matrix( DTD ) ).solve( new Matrix( b ) );
+		final Matrix V = choleskyDecomposition.solve( new Matrix( b ) );
 		return ellipsoidFromEquation( V );
 	}
 
