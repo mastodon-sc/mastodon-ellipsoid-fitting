@@ -176,7 +176,10 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 		final RefSet< Spot > vertices = appModel.getSelectionModel().getSelectedVertices();
 		if ( vertices.isEmpty() )
-			System.err.println( "no vertex selected" );
+		{
+			System.out.println( "no vertex selected" );
+			return;
+		}
 
 		final AffineTransform3D sourceToGlobal = new AffineTransform3D();
 		// init watch and counters
