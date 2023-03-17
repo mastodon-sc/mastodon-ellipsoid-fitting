@@ -47,12 +47,13 @@ public class FitEllipsoid
 	 * Fits an ellipsoid in the form <i>Ax</i><sup>2</sup> +
 	 * <i>By</i><sup>2</sup> + <i>Cz</i><sup>2</sup> + 2<i>Dxy</i> + 2<i>Exz</i>
 	 * + 2<i>Fyz</i> + 2<i>Gx</i> + 2<i>Hy</i> + 2<i>Iz</i> = 1 <br>
-	 * To an n * 3 array of coordinates.
+	 * to an n * 3 array of coordinates.
 	 * </p>
-	 * 
+	 *
 	 * @param points
 	 *            the 2D array of the points to fit.
-	 * @return a new {@link Ellipsoid} object.
+	 * @return a new {@link Ellipsoid} object or {@code null} if the fit failed.
+	 * @throws IllegalArgumentException if there are less than 9 points in the given array.
 	 *
 	 * @see <a href=
 	 *      "http://www.mathworks.com/matlabcentral/fileexchange/24693-ellipsoid-fit"
