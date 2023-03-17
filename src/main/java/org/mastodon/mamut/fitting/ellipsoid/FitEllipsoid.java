@@ -94,7 +94,12 @@ public class FitEllipsoid
 			// in this case, ellipsoid fitting is not possible
 			return null;
 		final Matrix V = choleskyDecomposition.solve( new Matrix( b ) );
-		return ellipsoidFromEquation( V );
+		Ellipsoid ellipsoid = ellipsoidFromEquation( V );
+		final double[] radii = ellipsoid.getRadii();
+		// if any of the radii is NaN, the fit failed, and we return null
+		if ( Double.isNaN( radii[ 0 ] ) || Double.isNaN( radii[ 1 ] ) || Double.isNaN( radii[ 2 ] ) )
+			return null;
+		return ellipsoid;
 	}
 
 	/**
