@@ -43,6 +43,8 @@ import org.mastodon.mamut.fitting.ellipsoid.DistPointHyperEllipsoid.Result;
 import net.imglib2.algorithm.edge.Edgel;
 import net.imglib2.util.LinAlgHelpers;
 
+import javax.annotation.Nullable;
+
 public class SampleEllipsoidEdgel
 {
 	public static Map< Edgel, Double > getCosts(
@@ -60,6 +62,19 @@ public class SampleEllipsoidEdgel
 		return costs;
 	}
 
+	/**
+	 * Try to fit an ellipsoid to the given {@link List} of {@link Edgel} objects.
+	 *
+	 * @param edgels a list of edgels to fit to an ellipsoid.
+	 * @param expectedCenter the expected center of the ellipsoid to fit. The center of the fitted ellipsoid is allowed to deviate from this value by at most {@code maxCenterDistance}.
+	 * @param numSamples the number of samples to try. For each sample, a random subset of {@code numPointsPerSample} edgels is selected and fitted to an ellipsoid. The best fitting ellipsoid is returned.
+	 * @param outsideCutoffDistance the maximum allowed distance that and edgel may be outside the ellipsoid surface.
+	 * @param insideCutoffDistance the maximum allowed distance that and edgel may be inside the ellipsoid surface.
+	 * @param angleCutoffDistance the maximum allowed angle between the normal of the fitted ellipsoid and the normal of the edgel.
+	 * @param maxCenterDistance the maximum allowed distance between the center of the fitted ellipsoid and the expected center.
+	 * @return the best fitting ellipsoid, or {@code null} if no ellipsoid could be fit. The latter happens if there are not enough edgels for fitting (at least 9 are required) or if the fitting fails.
+	 */
+	@Nullable
 	public static Ellipsoid sample(
 			final List< Edgel > edgels,
 			final double[] expectedCenter,
@@ -75,6 +90,7 @@ public class SampleEllipsoidEdgel
 			return null;
 		}
 		final int numPointsPerSample = 9;
+		// Avoid endless loop if there are not enough edgels for ellipsoid fitting.
 		if ( edgels.size() < numPointsPerSample )
 		{
 			// System.out.println(
@@ -112,6 +128,7 @@ public class SampleEllipsoidEdgel
 				{
 					continue;
 				}
+
 				// skip degenerate samples
 				final double[] radii = ellipsoid.getRadii();
 				if ( Double.isNaN( radii[ 0 ] ) || Double.isNaN( radii[ 1 ] ) || Double.isNaN( radii[ 2 ] ) )
