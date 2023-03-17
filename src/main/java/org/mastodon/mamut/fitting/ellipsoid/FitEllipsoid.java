@@ -230,8 +230,7 @@ public class FitEllipsoid
 		final RandomAccessibleInterval< FloatType > input;
 		if ( smoothSigma > 0 )
 		{
-			long[] widthHeightDepth = FitEllipsoidPlugin.longArrayFrom( cropped, Interval::dimensions );
-			final RandomAccessibleInterval< FloatType > img = ArrayImgs.floats( widthHeightDepth );
+			final RandomAccessibleInterval< FloatType > img = ArrayImgs.floats( cropped.dimensionsAsLongArray() );
 			final double[] sigmas = new double[ 3 ];
 			for ( int d = 0; d < 3; ++d )
 				sigmas[ d ] = smoothSigma / scale[ d ];
