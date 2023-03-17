@@ -178,7 +178,7 @@ public class SampleEllipsoidEdgel
 		}
 	}
 
-	public static Ellipsoid fitToInliers(
+	private static Ellipsoid fitToInliers(
 			final Ellipsoid guess,
 			final List< Edgel > edgels,
 			final double outsideCutoffDistance,
