@@ -178,8 +178,18 @@ public class SampleEllipsoidEdgel
 		}
 	}
 
+	/**
+	 * Fit an ellipsoid to the {@link Edgel} objects that can be considered inliers of the given ellipsoid.
+	 *
+	 * @param ellipsoid the ellipsoid to fit to the inliers.
+	 * @param edgels a list of edgels to fit to an ellipsoid.
+	 * @param outsideCutoffDistance the maximum allowed distance that and edgel may be outside the ellipsoid surface.
+	 * @param insideCutoffDistance the maximum allowed distance that and edgel may be inside the ellipsoid surface.
+	 * @param angleCutoffDistance the maximum allowed angle between the normal of the fitted ellipsoid and the normal of the edgel.
+	 * @return the ellipsoid best fitting to its inliers, or {@code ellipsoid} if no ellipsoid could be fit to the inliers.
+	 */
 	private static Ellipsoid fitToInliers(
-			final Ellipsoid guess,
+			final Ellipsoid ellipsoid,
 			final List< Edgel > edgels,
 			final double outsideCutoffDistance,
 			final double insideCutoffDistance,
@@ -188,7 +198,7 @@ public class SampleEllipsoidEdgel
 		final ArrayList< Edgel > inliers = new ArrayList<>();
 		final Cost costFunction = new EdgelDistanceCost( outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance );
 		for ( final Edgel edgel : edgels )
-			if ( costFunction.isInlier( guess, edgel ) )
+			if ( costFunction.isInlier( ellipsoid, edgel ) )
 				inliers.add( edgel );
 
 		final double[][] coordinates = new double[ inliers.size() ][ 3 ];
