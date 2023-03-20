@@ -38,7 +38,6 @@ import bdv.util.BdvStackSource;
 import bdv.util.Bounds;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.SourceAndConverter;
-import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.edge.Edgel;
 import net.imglib2.algorithm.edge.SubpixelEdgelDetection;
@@ -54,7 +53,6 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.LinAlgHelpers;
 import net.imglib2.view.Views;
 import org.mastodon.mamut.MamutAppModel;
-import org.mastodon.mamut.fitting.FitEllipsoidPlugin;
 import org.mastodon.mamut.fitting.edgel.Edgels;
 import org.mastodon.mamut.fitting.edgel.SampleEllipsoidEdgel;
 import org.mastodon.mamut.fitting.ui.EdgelsOverlay;
@@ -72,6 +70,13 @@ import java.util.Map;
  */
 public class FitEllipsoid
 {
+
+	private static final double OUTSIDE_CUTOFF_DISTANCE = 3;
+
+	private static final double INSIDE_CUTOFF_DISTANCE = 5;
+
+	private static final double ANGLE_CUTOFF_DISTANCE = 30 * Math.PI / 180.0;
+
 	/**
 	 * <p>
 	 * Ellipsoid fitting method by Yury Petrov.<br>
@@ -175,17 +180,17 @@ public class FitEllipsoid
 	 *
 	 * @param spot the spot to fit
 	 * @param source the image source
-	 * @param sourceToGlobal the source to global transform
+	 * @param sourceToGlobalTransform the source to global transform
 	 * @param appModel the app model
 	 * @param isDebug whether to show debug images
-	 * @return the fitted ellipsoid, or null if the fit failed.
+	 * @return the fitted ellipsoid, or {@code null} if the fit failed.
 	 */
+	@Nullable
 	public static < T extends RealType< T > > Ellipsoid getFittedEllipsoid( final Spot spot, final SourceAndConverter< T > source,
-			final AffineTransform3D sourceToGlobal, final MamutAppModel appModel, boolean isDebug )
+			final AffineTransform3D sourceToGlobalTransform, final MamutAppModel appModel, boolean isDebug )
 	{
 		// TODO: parameters -----------------
 		final double smoothSigma = 2;
-
 		final double minGradientMagnitude = 10;
 
 		final double maxAngle = 5 * Math.PI / 180.0;
@@ -193,23 +198,20 @@ public class FitEllipsoid
 
 		// TODO: test with different values, e.g. 100 and 1000 and see how many ellipsoids are found
 		final int numSamples = 1000;
-		final double outsideCutoffDistance = 3;
-		final double insideCutoffDistance = 5;
-		final double angleCutoffDistance = 30 * Math.PI / 180.0;
 		final double maxCenterDistance = 10;
 		// ----------------------------------
 
 		final int timepoint = spot.getTimepoint();
-		source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
+		source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobalTransform );
 
 		final double[] centerInGlobalCoordinates = new double[ 3 ];
 		final double[] centerInLocalCoordinates = new double[ 3 ];
 		spot.localize( centerInGlobalCoordinates );
-		sourceToGlobal.applyInverse( centerInLocalCoordinates, centerInGlobalCoordinates );
+		sourceToGlobalTransform.applyInverse( centerInLocalCoordinates, centerInGlobalCoordinates );
 
 		final double[] scale = new double[ 3 ];
 		for ( int d = 0; d < 3; ++d )
-			scale[ d ] = Affine3DHelpers.extractScale( sourceToGlobal, d );
+			scale[ d ] = Affine3DHelpers.extractScale( sourceToGlobalTransform, d );
 
 		final long[] lMin = new long[ 3 ];
 		final long[] lMax = new long[ 3 ];
@@ -249,7 +251,7 @@ public class FitEllipsoid
 
 		final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ),
 				new ArrayImgFactory<>( new FloatType() ), minGradientMagnitude );
-		final AffineTransform3D zeroMinSourceToGlobal = sourceToGlobal.copy();
+		final AffineTransform3D zeroMinSourceToGlobal = sourceToGlobalTransform.copy();
 		final AffineTransform3D shiftToMin = new AffineTransform3D();
 		shiftToMin.translate( lMin[ 0 ], lMin[ 1 ], lMin[ 2 ] );
 		zeroMinSourceToGlobal.concatenate( shiftToMin );
@@ -259,43 +261,48 @@ public class FitEllipsoid
 				maxAngle, maxFactor );
 
 		final long t1 = System.currentTimeMillis();
-		final Ellipsoid ellipsoid = SampleEllipsoidEdgel.sample(
+		final Ellipsoid fittedEllipsoid = SampleEllipsoidEdgel.sample(
 				filteredEdgels,
 				centerInGlobalCoordinates,
 				numSamples,
-				outsideCutoffDistance,
-				insideCutoffDistance,
-				angleCutoffDistance,
+				OUTSIDE_CUTOFF_DISTANCE,
+				INSIDE_CUTOFF_DISTANCE,
+				ANGLE_CUTOFF_DISTANCE,
 				maxCenterDistance );
 		final long t2 = System.currentTimeMillis();
 
 		if ( isDebug )
-		{
-			System.out.println( "Computed ellipsoid in " + ( t2 - t1 ) + "ms. Ellipsoid: " + ellipsoid );
-			Bdv bdv;
-			final BdvStackSource< FloatType > inputSource =
-					BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
-			final ConverterSetups setups = appModel.getSharedBdvData().getConverterSetups();
-			final ConverterSetup cs = setups.getConverterSetup( source );
-			final Bounds bounds = setups.getBounds().getBounds( cs );
-			inputSource.setDisplayRange( cs.getDisplayRangeMin(), cs.getDisplayRangeMax() );
-			inputSource.setDisplayRangeBounds( bounds.getMinBound(), bounds.getMaxBound() );
-			bdv = inputSource;
+			showDebugInfos( source, sourceToGlobalTransform, appModel, input, filteredEdgels, t2 - t1, fittedEllipsoid );
+		return fittedEllipsoid;
+	}
 
-			EdgelsOverlay edgelsOverlay;
-			edgelsOverlay = new EdgelsOverlay( filteredEdgels, 0.01 );
-			BdvFunctions.showOverlay( edgelsOverlay, "filtered edgels", Bdv.options().addTo( bdv ) );
+	private static < T extends RealType< T > > void showDebugInfos( SourceAndConverter< T > source, AffineTransform3D sourceToGlobal,
+			MamutAppModel appModel,
+			RandomAccessibleInterval< FloatType > input, ArrayList< Edgel > filteredEdgels, long t, Ellipsoid ellipsoid )
+	{
+		System.out.println( "Computed ellipsoid in " + ( t ) + "ms. Ellipsoid: " + ellipsoid );
+		Bdv bdv;
+		final BdvStackSource< FloatType > inputSource =
+				BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
+		final ConverterSetups setups = appModel.getSharedBdvData().getConverterSetups();
+		final ConverterSetup cs = setups.getConverterSetup( source );
+		final Bounds bounds = setups.getBounds().getBounds( cs );
+		inputSource.setDisplayRange( cs.getDisplayRangeMin(), cs.getDisplayRangeMax() );
+		inputSource.setDisplayRangeBounds( bounds.getMinBound(), bounds.getMaxBound() );
+		bdv = inputSource;
 
-			BdvFunctions.showOverlay( new EllipsoidOverlay( ellipsoid ), "fitted ellipsoid",
-					Bdv.options().addTo( bdv ) );
-			final Map< Edgel, Double > costs = SampleEllipsoidEdgel.getCosts(
-					filteredEdgels,
-					ellipsoid,
-					outsideCutoffDistance,
-					insideCutoffDistance,
-					angleCutoffDistance );
-			edgelsOverlay.setCosts( costs );
-		}
-		return ellipsoid;
+		EdgelsOverlay edgelsOverlay;
+		edgelsOverlay = new EdgelsOverlay( filteredEdgels, 0.01 );
+		BdvFunctions.showOverlay( edgelsOverlay, "filtered edgels", Bdv.options().addTo( bdv ) );
+
+		BdvFunctions.showOverlay( new EllipsoidOverlay( ellipsoid ), "fitted ellipsoid",
+				Bdv.options().addTo( bdv ) );
+		final Map< Edgel, Double > costs = SampleEllipsoidEdgel.getCosts(
+				filteredEdgels,
+				ellipsoid,
+				OUTSIDE_CUTOFF_DISTANCE,
+				INSIDE_CUTOFF_DISTANCE,
+				ANGLE_CUTOFF_DISTANCE );
+		edgelsOverlay.setCosts( costs );
 	}
 }
