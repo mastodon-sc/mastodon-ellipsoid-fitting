@@ -52,7 +52,7 @@ public class FitEllipsoidTest
 	}
 
 	@Test
-	public void testGetSingleFittedEllipsoid()
+	public void testSingleEllipsoid()
 	{
 		// input covariance matrix
 		double[][] inputCovarianceMatrix = {
@@ -65,12 +65,12 @@ public class FitEllipsoidTest
 		double maxCenterOffset = 10;
 		int numberOfFits = 1000;
 
-		assertTrue( isEllipsoidFittingSuccessful( inputCovarianceMatrix, inputCenter, maxPercentageDifference, maxCenterOffset,
+		assertTrue( isFittingSuccessful( inputCovarianceMatrix, inputCenter, maxPercentageDifference, maxCenterOffset,
 				numberOfFits ) );
 	}
 
 	@Test
-	public void testGetMultipleFittedEllipsoid()
+	public void testMultipleEllipsoid()
 	{
 		String disclaimer = "This test may fail due to statistical reasons. Try running this test again, if it fails.";
 		int numberOfTests = 100;
@@ -115,7 +115,7 @@ public class FitEllipsoidTest
 			double center = ThreadLocalRandom.current().nextInt( 40, 60 );
 			double[] inputCenter = { center, center, center };
 			boolean successFulFit =
-					isEllipsoidFittingSuccessful( inputCovarianceMatrix, inputCenter, acceptedMaxPercentagedDifference,
+					isFittingSuccessful( inputCovarianceMatrix, inputCenter, acceptedMaxPercentagedDifference,
 							acceptedMaxCenterOffset, numberOfFits );
 			if ( successFulFit )
 				countSuccessfulFits++;
@@ -124,7 +124,7 @@ public class FitEllipsoidTest
 		return countSuccessfulFits;
 	}
 
-	private static boolean isEllipsoidFittingSuccessful( double[][] inputCovarianceMatrix, double[] inputCenter,
+	private static boolean isFittingSuccessful( double[][] inputCovarianceMatrix, double[] inputCenter,
 			double maxPercentageDifference, double maxCenterOffset, int numberOfFits )
 	{
 		BlobRenderingUtils.renderMultivariateNormalDistribution( inputCenter, inputCovarianceMatrix, image );
