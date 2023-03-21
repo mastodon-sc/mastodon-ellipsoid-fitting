@@ -76,15 +76,15 @@ public class FitEllipsoidTest
 		int numberOfTests = 100;
 
 		int numberOfFits = 1000;
-		int successFulTests1 = runTests( 0.2d, 10, numberOfFits, numberOfTests );
+		int successFulTests1 = runTests( 0.3d, 10, numberOfFits, numberOfTests );
 		// Nota bene: only 33% of the tests have to be successful to pass this test. This is due to the fact that the ellipsoid fitting has poor performance.
 		double acceptedPercentageOfSuccessfulTests = 0.33d;
 		assertTrue( disclaimer, successFulTests1 > numberOfTests * acceptedPercentageOfSuccessfulTests );
 
 		numberOfFits = 100;
-		int successFulTests2 = runTests( 0.2d, 10, numberOfFits, numberOfTests );
+		int successFulTests2 = runTests( 0.3d, 10, numberOfFits, numberOfTests );
 		// Nota bene: only 20% of the tests have to be successful to pass this test. This is due to the fact that the ellipsoid fitting has poor performance.
-		acceptedPercentageOfSuccessfulTests = 0.2d;
+		acceptedPercentageOfSuccessfulTests = 0.25d;
 		assertTrue( disclaimer, successFulTests2 > numberOfTests * acceptedPercentageOfSuccessfulTests );
 
 		assertTrue( disclaimer, successFulTests1 > successFulTests2 );
