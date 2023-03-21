@@ -32,23 +32,15 @@ package org.mastodon.mamut.fitting;
 import static org.mastodon.app.ui.ViewMenuBuilder.item;
 import static org.mastodon.app.ui.ViewMenuBuilder.menu;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 
-import org.apache.commons.lang3.time.StopWatch;
 import org.mastodon.app.ui.ViewMenuBuilder;
-import org.mastodon.collection.RefSet;
 import org.mastodon.mamut.MamutAppModel;
-import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
-import org.mastodon.mamut.fitting.ellipsoid.FitEllipsoid;
-import org.mastodon.mamut.model.Spot;
+import org.mastodon.mamut.fitting.ellipsoid.FitEllipsoidProcessor;
 import org.mastodon.mamut.plugin.MamutPlugin;
 import org.mastodon.mamut.plugin.MamutPluginAppModel;
 import org.mastodon.ui.keymap.CommandDescriptionProvider;
@@ -62,7 +54,6 @@ import org.scijava.ui.behaviour.util.RunnableAction;
 
 import bdv.viewer.SourceAndConverter;
 import net.imglib2.EuclideanSpace;
-import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.RealType;
 
 @Plugin( type = FitEllipsoidPlugin.class )
@@ -73,12 +64,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	private static final String[] FIT_SELECTED_VERTICES_KEYS = new String[] { "meta F", "alt F" };
 
 	private static Map< String, String > menuTexts = new HashMap<>();
-
-	private final AtomicInteger found = new AtomicInteger( 0 );
-
-	private final AtomicInteger notFound = new AtomicInteger( 0 );
-
-	private final StopWatch watch = new StopWatch();
 
 	static
 	{
@@ -163,63 +148,9 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			if ( !( source.getSpimSource().getType() instanceof RealType ) )
 				throw new IllegalArgumentException( "Expected RealType image source" );
 
-			process( ( SourceAndConverter ) source );
+			FitEllipsoidProcessor fitEllipsoidProcessor = new FitEllipsoidProcessor();
+			fitEllipsoidProcessor.process( ( SourceAndConverter ) source, pluginAppModel.getAppModel(), true, true );
 		}
-	}
-
-	private static final boolean DEBUG = false;
-
-	@SuppressWarnings( "unused" )
-	private < T extends RealType< T > > void process( final SourceAndConverter< T > source )
-	{
-		final MamutAppModel appModel = pluginAppModel.getAppModel();
-
-		final RefSet< Spot > vertices = appModel.getSelectionModel().getSelectedVertices();
-		if ( vertices.isEmpty() )
-		{
-			System.out.println( "no vertex selected" );
-			return;
-		}
-
-		final AffineTransform3D sourceToGlobal = new AffineTransform3D();
-		// init watch and counters
-		{
-			watch.reset();
-			watch.start();
-			found.set( 0 );
-			notFound.set( 0 );
-		}
-
-		// Fixed thread number depending on the number of available processors
-		int processors = Runtime.getRuntime().availableProcessors();
-		ExecutorService executorService = Executors.newFixedThreadPool( processors );
-		List< Callable< Object > > todo = new ArrayList<>( vertices.size() );
-
-		// parallelize over vertices
-		for ( final Spot spot : vertices )
-		{
-			Spot spotCopy = appModel.getModel().getGraph().vertexRef();
-			spotCopy.refTo( spot );
-			todo.add( Executors.callable( () -> updateEllipsoid( spotCopy, source, sourceToGlobal, appModel, vertices.size() ) ) );
-		}
-
-		// invoke all tasks
-		try
-		{
-			executorService.invokeAll( todo );
-		}
-		catch ( InterruptedException e )
-		{
-			e.printStackTrace();
-		}
-
-		System.out.println( "found: " + found.get() + " ("
-				+ Math.round( ( double ) found.get() / ( found.get() + notFound.get() ) * 100d )
-				+ "%), not found: " + notFound.get() + " ("
-				+ Math.round( ( double ) notFound.get() / ( found.get() + notFound.get() ) * 100d )
-				+ "%), total time: " + watch.formatTime()
-				+ ", time per spot: " + ( int ) ( ( double ) watch.getTime() / ( found.get() + notFound.get() ) )
-				+ "ms." );
 	}
 
 	// TODO: move to imglib2 core and make versions for int[], double[] ???
@@ -228,46 +159,5 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		final long[] a = new long[ t.numDimensions() ];
 		get.accept( t, a );
 		return a;
-	}
-
-	private < T extends RealType< T > > void updateEllipsoid( final Spot spot, final SourceAndConverter< T > source,
-			final AffineTransform3D sourceToGlobal,
-			final MamutAppModel appModel, final int totalTasks )
-	{
-		Ellipsoid ellipsoid = FitEllipsoid.getFittedEllipsoid( spot, source, sourceToGlobal, appModel, 100, DEBUG, DEBUG );
-
-		if ( ellipsoid == null )
-		{
-			notFound.getAndIncrement();
-			if ( DEBUG )
-				System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
-			return;
-		}
-		else
-			found.getAndIncrement();
-
-		if ( DEBUG )
-		{
-			int outputRate = 1000;
-			if ( ( found.get() + notFound.get() ) % outputRate == 0 )
-				System.out
-						.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks
-								+ " ellipsoids ("
-								+ Math.round( ( found.get() + notFound.get() ) / ( double ) totalTasks * 100d )
-								+ "%). Total time: "
-								+ watch.formatTime() );
-		}
-
-		ReentrantReadWriteLock.WriteLock writeLock = appModel.getModel().getGraph().getLock().writeLock();
-		writeLock.lock();
-		try
-		{
-			spot.setPosition( ellipsoid );
-			spot.setCovariance( ellipsoid.getCovariance() );
-		}
-		finally
-		{
-			writeLock.unlock();
-		}
 	}
 }
