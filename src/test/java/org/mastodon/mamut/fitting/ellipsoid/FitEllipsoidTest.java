@@ -119,8 +119,8 @@ public class FitEllipsoidTest
 							acceptedMaxCenterOffset, numberOfFits );
 			if ( successFulFit )
 				countSuccessfulFits++;
+			System.out.println( "Successful fits: " + countSuccessfulFits + "/" + ( i + 1 ) );
 		}
-		System.out.println( "Successful fits: " + countSuccessfulFits + "/" + numberOfTests );
 		return countSuccessfulFits;
 	}
 
