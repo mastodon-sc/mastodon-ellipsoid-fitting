@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class FitEllipsoidProcessorTest
 {
@@ -84,14 +85,24 @@ public class FitEllipsoidProcessorTest
 		final SourceAndConverter< ? > source = sharedBigDataViewerData.getSources().get( 0 );
 		appModel.getModel().getGraph().vertices().forEach( vertex -> appModel.getSelectionModel().setSelected( vertex, true ) );
 
+		long t1 = System.currentTimeMillis();
 		FitEllipsoidProcessor fitEllipsoidProcessorParallel = new FitEllipsoidProcessor();
 		fitEllipsoidProcessorParallel.process( ( SourceAndConverter ) source, appModel, true, false );
 		System.out.println( "Found " + fitEllipsoidProcessorParallel.getFound().get() + " spots (parallel)." );
 		assertEquals( 64, fitEllipsoidProcessorParallel.getFound().get() );
+		long t2 = System.currentTimeMillis();
 
+		long t3 = System.currentTimeMillis();
 		FitEllipsoidProcessor fitEllipsoidProcessorSequential = new FitEllipsoidProcessor();
 		fitEllipsoidProcessorSequential.process( ( SourceAndConverter ) source, appModel, false, false );
 		System.out.println( "Found " + fitEllipsoidProcessorSequential.getFound().get() + " spots (sequential)." );
 		assertEquals( 64, fitEllipsoidProcessorSequential.getFound().get() );
+		long t4 = System.currentTimeMillis();
+
+		System.out.println( "Parallel: " + ( t2 - t1 ) + " ms" );
+		System.out.println( "Sequential: " + ( t4 - t3 ) + " ms" );
+		// parallel should be faster, if there is more than 1 core available
+		if ( Runtime.getRuntime().availableProcessors() > 1 )
+			assertTrue( ( t2 - t1 ) < ( t4 - t3 ) );
 	}
 }
