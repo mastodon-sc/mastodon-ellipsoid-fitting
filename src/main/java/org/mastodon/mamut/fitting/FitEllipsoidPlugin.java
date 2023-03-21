@@ -234,7 +234,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			final AffineTransform3D sourceToGlobal,
 			final MamutAppModel appModel, final int totalTasks )
 	{
-		Ellipsoid ellipsoid = FitEllipsoid.getFittedEllipsoid( spot, source, sourceToGlobal, appModel, DEBUG );
+		Ellipsoid ellipsoid = FitEllipsoid.getFittedEllipsoid( spot, source, sourceToGlobal, appModel, 100, DEBUG, DEBUG );
 
 		if ( ellipsoid == null )
 		{

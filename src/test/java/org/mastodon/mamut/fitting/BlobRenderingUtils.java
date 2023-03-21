@@ -32,14 +32,29 @@ public class BlobRenderingUtils
 	 * Renders the density function of a multivariate normal distribution into an image.
 	 * @see <a href="https://en.wikipedia.org/wiki/Multivariate_normal_distribution">Wikipedia Multivariate normal distribution</a>
 	 * @param center center of the distribution
-	 * @param cov covariance matrix of the distribution
+	 * @param cov covariance matrix of the distribution (must be symmetric and positive definite)
+	 * @param imageDimension dimension of the image to render into (image is a cube)
 	 * @return the image
 	 *
 	 */
 	@Nonnull
-	public static Img< FloatType > renderMultivariateNormalDistribution( double[] center, double[][] cov )
+	public static Img< FloatType > renderMultivariateNormalDistribution( double[] center, double[][] cov, int imageDimension )
 	{
-		Img< FloatType > image = ArrayImgs.floats( 100, 100, 100 );
+		Img< FloatType > image = ArrayImgs.floats( imageDimension, imageDimension, imageDimension );
+		renderMultivariateNormalDistribution( center, cov, image );
+		return image;
+	}
+
+	/**
+	 * Renders the density function of a multivariate normal distribution into a given image.
+	 * @see <a href="https://en.wikipedia.org/wiki/Multivariate_normal_distribution">Wikipedia Multivariate normal distribution</a>
+	 * @param center center of the distribution
+	 * @param cov covariance matrix of the distribution (must be symmetric and positive definite)
+	 * @param image the image to render into (image is a cube)
+	 *
+	 */
+	public static void renderMultivariateNormalDistribution( double[] center, double[][] cov, @Nonnull Img< FloatType > image )
+	{
 		AffineTransform3D sigma = new AffineTransform3D();
 		sigma.set(
 				cov[ 0 ][ 0 ], cov[ 0 ][ 1 ], cov[ 0 ][ 2 ], 0,
@@ -52,10 +67,10 @@ public class BlobRenderingUtils
 			position.localize( coord );
 			LinAlgHelpers.subtract( coord, center, coord );
 			sigma.applyInverse( out, coord );
-			double value = Math.exp( -scalarProduct( coord, out ) );
+			// leave out the 1 / (sqrt( ( 2 * pi ) ^ 3 * det( cov )) factor to make the image more visible
+			double value = Math.exp( -0.5 * scalarProduct( coord, out ) );
 			pixel.setReal( 1000 * value );
 		} );
-		return image;
 	}
 
 	/**

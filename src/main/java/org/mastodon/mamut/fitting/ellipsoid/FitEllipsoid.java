@@ -182,12 +182,15 @@ public class FitEllipsoid
 	 * @param source the image source
 	 * @param sourceToGlobalTransform the source to global transform
 	 * @param appModel the app model
-	 * @param isDebug whether to show debug images
+	 * @param numberOfFits the number of fits to process in order to find the best one
+	 * @param verbose whether to show performance infos
+	 * @param showDebugUI whether to show the debug UI
 	 * @return the fitted ellipsoid, or {@code null} if the fit failed.
 	 */
 	@Nullable
 	public static < T extends RealType< T > > Ellipsoid getFittedEllipsoid( final Spot spot, final SourceAndConverter< T > source,
-			final AffineTransform3D sourceToGlobalTransform, final MamutAppModel appModel, boolean isDebug )
+			final AffineTransform3D sourceToGlobalTransform, final MamutAppModel appModel, int numberOfFits, boolean verbose,
+			boolean showDebugUI )
 	{
 		// TODO: parameters -----------------
 		final double smoothSigma = 2;
@@ -197,7 +200,6 @@ public class FitEllipsoid
 		final double maxFactor = 1.1;
 
 		// TODO: test with different values, e.g. 100 and 1000 and see how many ellipsoids are found
-		final int numSamples = 1000;
 		final double maxCenterDistance = 10;
 		// ----------------------------------
 
@@ -264,23 +266,23 @@ public class FitEllipsoid
 		final Ellipsoid fittedEllipsoid = SampleEllipsoidEdgel.sample(
 				filteredEdgels,
 				centerInGlobalCoordinates,
-				numSamples,
+				numberOfFits,
 				OUTSIDE_CUTOFF_DISTANCE,
 				INSIDE_CUTOFF_DISTANCE,
 				ANGLE_CUTOFF_DISTANCE,
 				maxCenterDistance );
 		final long t2 = System.currentTimeMillis();
 
-		if ( isDebug )
-			showDebugInfos( source, sourceToGlobalTransform, appModel, input, filteredEdgels, t2 - t1, fittedEllipsoid );
+		if ( verbose )
+			System.out.println( "Computed ellipsoid in " + ( t2 - t1 ) + "ms. Ellipsoid: " + fittedEllipsoid );
+		if ( showDebugUI )
+			showDebugUI( source, sourceToGlobalTransform, appModel, input, filteredEdgels, fittedEllipsoid );
 		return fittedEllipsoid;
 	}
 
-	private static < T extends RealType< T > > void showDebugInfos( SourceAndConverter< T > source, AffineTransform3D sourceToGlobal,
-			MamutAppModel appModel,
-			RandomAccessibleInterval< FloatType > input, ArrayList< Edgel > filteredEdgels, long t, Ellipsoid ellipsoid )
+	private static < T extends RealType< T > > void showDebugUI( SourceAndConverter< T > source, AffineTransform3D sourceToGlobal,
+			MamutAppModel appModel, RandomAccessibleInterval< FloatType > input, ArrayList< Edgel > filteredEdgels, Ellipsoid ellipsoid )
 	{
-		System.out.println( "Computed ellipsoid in " + ( t ) + "ms. Ellipsoid: " + ellipsoid );
 		Bdv bdv;
 		final BdvStackSource< FloatType > inputSource =
 				BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );

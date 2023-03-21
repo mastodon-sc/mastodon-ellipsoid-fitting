@@ -58,7 +58,7 @@ public class BlobRenderingDemo
 				{ 200, 300, 400 }
 		};
 		double[] center = { 50, 50, 50 };
-		Img< FloatType > image = BlobRenderingUtils.renderMultivariateNormalDistribution( center, cov );
+		Img< FloatType > image = BlobRenderingUtils.renderMultivariateNormalDistribution( center, cov, 100 );
 		SharedBigDataViewerData sharedBigDataViewerData = BlobRenderingUtils.asSharedBdvDataXyz( image );
 		Model model = new Model();
 		// method init generates a spot
