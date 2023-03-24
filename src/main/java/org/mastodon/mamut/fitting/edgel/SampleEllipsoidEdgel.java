@@ -65,7 +65,7 @@ public class SampleEllipsoidEdgel
 	/**
 	 * Try to fit an ellipsoid to the given {@link List} of {@link Edgel} objects.
 	 *
-	 * @param edgels a list of edgels to fit to an ellipsoid.
+	 * @param edgels list of edgels to fit an ellipsoid to.
 	 * @param expectedCenter the expected center of the ellipsoid to fit. The center of the fitted ellipsoid is allowed to deviate from this value by at most {@code maxCenterDistance}.
 	 * @param numSamples the number of samples to try. For each sample, a random subset of {@code numPointsPerSample} edgels is selected and fitted to an ellipsoid. The best fitting ellipsoid is returned.
 	 * @param outsideCutoffDistance the maximum allowed distance that and edgel may be outside the ellipsoid surface.
@@ -123,8 +123,7 @@ public class SampleEllipsoidEdgel
 					continue;
 
 				ellipsoid.localize( center );
-				LinAlgHelpers.subtract( center, expectedCenter, center );
-				if ( LinAlgHelpers.length( center ) > maxCenterDistance )
+				if ( LinAlgHelpers.distance( center, expectedCenter ) > maxCenterDistance )
 					continue;
 
 				final double cost = costFunction.compute( ellipsoid, edgels );
@@ -146,29 +145,22 @@ public class SampleEllipsoidEdgel
 		}
 
 		// refined ellipsoid
-		return fitToInliers( bestEllipsoid, edgels, outsideCutoffDistance, insideCutoffDistance,
-				angleCutoffDistance );
+		return fitToInliers( bestEllipsoid, edgels, costFunction );
 	}
 
 	/**
 	 * Fit an ellipsoid to the {@link Edgel} objects that can be considered inliers of the given ellipsoid.
 	 *
-	 * @param ellipsoid the ellipsoid to fit to the inliers.
-	 * @param edgels a list of edgels to fit to an ellipsoid.
-	 * @param outsideCutoffDistance the maximum allowed distance that and edgel may be outside the ellipsoid surface.
-	 * @param insideCutoffDistance the maximum allowed distance that and edgel may be inside the ellipsoid surface.
-	 * @param angleCutoffDistance the maximum allowed angle between the normal of the fitted ellipsoid and the normal of the edgel.
+	 * @param ellipsoid             ellipsoid used to filter inliers.
+	 * @param edgels                list of edgels to use for ellipsoid fitting.
+	 * @param costFunction          the cost function to use for determining inliers.
 	 * @return the ellipsoid best fitting to its inliers, or {@code ellipsoid} if no ellipsoid could be fit to the inliers.
 	 */
 	private static Ellipsoid fitToInliers(
 			final Ellipsoid ellipsoid,
-			final List< Edgel > edgels,
-			final double outsideCutoffDistance,
-			final double insideCutoffDistance,
-			final double angleCutoffDistance )
+			final List< Edgel > edgels, Cost costFunction )
 	{
 		final ArrayList< Edgel > inliers = new ArrayList<>();
-		final Cost costFunction = new EdgelDistanceCost( outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance );
 		for ( final Edgel edgel : edgels )
 			if ( costFunction.isInlier( ellipsoid, edgel ) )
 				inliers.add( edgel );
