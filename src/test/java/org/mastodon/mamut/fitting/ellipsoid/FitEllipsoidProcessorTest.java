@@ -1,10 +1,15 @@
 package org.mastodon.mamut.fitting.ellipsoid;
 
 import bdv.viewer.SourceAndConverter;
+
+import net.imglib2.Interval;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Intervals;
+import net.imglib2.view.Views;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mastodon.mamut.MamutAppModel;
@@ -35,42 +40,52 @@ public class FitEllipsoidProcessorTest
 
 	private static SharedBigDataViewerData sharedBigDataViewerData;
 
+	private static final int COLUMNS = 4;
+
+	private static final int NUMBER_OF_SPOTS = COLUMNS * COLUMNS * COLUMNS;
+
 	@BeforeClass
 	public static void setUp()
 	{
+		int size = 100;
+
 		Keymap keymap = new Keymap();
-		Img< FloatType > image = ArrayImgs.floats( 400, 400, 400 );
+		Img< FloatType > image = ArrayImgs.floats( COLUMNS * size, COLUMNS * size, COLUMNS * size );
 		Model model = new Model();
 		sharedBigDataViewerData = BlobRenderingUtils.asSharedBdvDataXyz( image );
 		appModel = new MamutAppModel( model, sharedBigDataViewerData, new KeyPressedManager(), new TrackSchemeStyleManager(),
 				new DataDisplayStyleManager(), new RenderSettingsManager(), new FeatureColorModeManager(), new KeymapManager(),
 				new MamutPlugins( keymap ), new Actions( keymap.getConfig() ) );
 
-		int size = 100;
-		for ( int i = 0; i < 4; i++ )
-			for ( int j = 0; j < 4; j++ )
-				for ( int k = 0; k < 4; k++ )
+		for ( int i = 0; i < COLUMNS; i++ )
+			for ( int j = 0; j < COLUMNS; j++ )
+				for ( int k = 0; k < COLUMNS; k++ )
 				{
-					double cov00 = ThreadLocalRandom.current().nextInt( 64, 400 );
-					double cov01 = ThreadLocalRandom.current().nextInt( 20, 50 );
-					double cov02 = ThreadLocalRandom.current().nextInt( 20, 50 );
-					double cov12 = ThreadLocalRandom.current().nextInt( 20, 50 );
-					// input covariance matrix
-					double[][] inputCovarianceMatrix = {
-							{ cov00, cov01, cov02 },
-							{ cov01, cov00, cov12 },
-							{ cov02, cov12, cov00 }
-					};
+					double[][] inputCovarianceMatrix = randomizedCovarianceMatrix();
 					int centerX = i * size + size / 2;
 					int centerY = j * size + size / 2;
 					int centerZ = k * size + size / 2;
 					double[] inputCenter = { centerX, centerY, centerZ };
-
-					BlobRenderingUtils.renderMultivariateNormalDistribution( inputCenter, inputCovarianceMatrix, ( double ) size, image );
+					Interval interval = Intervals.createMinSize( i * size, j * size, k * size, size, size, size );
+					BlobRenderingUtils.renderMultivariateNormalDistribution( inputCenter, inputCovarianceMatrix, Views.interval( image, interval ) );
 					System.out.println( "Adding spot at " + centerX + ", " + centerY + ", " + centerZ );
 					// method init generates a spot
 					model.getGraph().addVertex().init( 0, inputCenter, inputCovarianceMatrix );
 				}
+	}
+
+	private static double[][] randomizedCovarianceMatrix()
+	{
+		double cov00 = ThreadLocalRandom.current().nextInt( 64, 400 );
+		double cov01 = ThreadLocalRandom.current().nextInt( 20, 50 );
+		double cov02 = ThreadLocalRandom.current().nextInt( 20, 50 );
+		double cov12 = ThreadLocalRandom.current().nextInt( 20, 50 );
+		// input covariance matrix
+		return new double[][] {
+				{ cov00, cov01, cov02 },
+				{ cov01, cov00, cov12 },
+				{ cov02, cov12, cov00 }
+		};
 	}
 
 	private static < T extends RealType< T > > void showBdvWindow( @Nonnull MamutAppModel appModel )
@@ -89,14 +104,14 @@ public class FitEllipsoidProcessorTest
 		FitEllipsoidProcessor fitEllipsoidProcessorParallel = new FitEllipsoidProcessor();
 		fitEllipsoidProcessorParallel.process( ( SourceAndConverter ) source, appModel, true, false );
 		System.out.println( "Found " + fitEllipsoidProcessorParallel.getFound().get() + " spots (parallel)." );
-		assertEquals( 64, fitEllipsoidProcessorParallel.getFound().get() );
+		assertEquals( NUMBER_OF_SPOTS, fitEllipsoidProcessorParallel.getFound().get() );
 		long t2 = System.currentTimeMillis();
 
 		long t3 = System.currentTimeMillis();
 		FitEllipsoidProcessor fitEllipsoidProcessorSequential = new FitEllipsoidProcessor();
 		fitEllipsoidProcessorSequential.process( ( SourceAndConverter ) source, appModel, false, false );
 		System.out.println( "Found " + fitEllipsoidProcessorSequential.getFound().get() + " spots (sequential)." );
-		assertEquals( 64, fitEllipsoidProcessorSequential.getFound().get() );
+		assertEquals( NUMBER_OF_SPOTS, fitEllipsoidProcessorSequential.getFound().get() );
 		long t4 = System.currentTimeMillis();
 
 		System.out.println( "Parallel: " + ( t2 - t1 ) + " ms" );
