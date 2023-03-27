@@ -153,11 +153,4 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		}
 	}
 
-	// TODO: move to imglib2 core and make versions for int[], double[] ???
-	public static < T extends EuclideanSpace > long[] longArrayFrom( final T t, final BiConsumer< T, long[] > get )
-	{
-		final long[] a = new long[ t.numDimensions() ];
-		get.accept( t, a );
-		return a;
-	}
 }
