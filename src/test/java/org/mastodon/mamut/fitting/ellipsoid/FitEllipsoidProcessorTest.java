@@ -76,11 +76,13 @@ public class FitEllipsoidProcessorTest
 
 	private static double[][] randomizedCovarianceMatrix()
 	{
+		// The returned matrix, is strictly diagonal dominant, with positive diagonal elements
+		// and therefore positive definite.
+		// see: https://en.wikipedia.org/wiki/Diagonally_dominant_matrix#Applications_and_properties
 		double cov00 = ThreadLocalRandom.current().nextInt( 64, 400 );
-		double cov01 = ThreadLocalRandom.current().nextInt( 20, 50 );
-		double cov02 = ThreadLocalRandom.current().nextInt( 20, 50 );
-		double cov12 = ThreadLocalRandom.current().nextInt( 20, 50 );
-		// input covariance matrix
+		double cov01 = ThreadLocalRandom.current().nextInt( 0, 32 );
+		double cov02 = ThreadLocalRandom.current().nextInt( 0, 32 );
+		double cov12 = ThreadLocalRandom.current().nextInt( 0, 32 );
 		return new double[][] {
 				{ cov00, cov01, cov02 },
 				{ cov01, cov00, cov12 },
