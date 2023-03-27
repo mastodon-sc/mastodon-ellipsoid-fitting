@@ -1,6 +1,8 @@
 package org.mastodon.mamut.fitting.ellipsoid;
 
 import bdv.viewer.SourceAndConverter;
+
+import net.imglib2.parallel.Parallelization;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.RealType;
 import org.apache.commons.lang3.time.StopWatch;
@@ -10,9 +12,6 @@ import org.mastodon.mamut.model.Spot;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -55,34 +54,18 @@ public class FitEllipsoidProcessor
 			notFound.set( 0 );
 		}
 
-		// Fixed thread number depending on the number of available processors
-		int processors = Runtime.getRuntime().availableProcessors();
-		ExecutorService executorService = Executors.newFixedThreadPool( processors );
-		List< Callable< Object > > todo = new ArrayList<>( vertices.size() );
-
-		// parallelize over vertices
-		for ( final Spot spot : vertices )
+		if( parallelize )
 		{
-			Spot spotCopy = appModel.getModel().getGraph().vertexRef();
-			spotCopy.refTo( spot );
-			if ( parallelize )
-				todo.add( Executors
-						.callable( () -> updateEllipsoid( spotCopy, source, sourceToGlobal, appModel, vertices.size(), verbose ) ) );
-			else
-				updateEllipsoid( spotCopy, source, sourceToGlobal, appModel, vertices.size(), verbose );
+			// Note: RefCollections, are not usable in parallel forEach, so we need to convert them to a ArrayList.
+			List< Spot > list = asArrayList( vertices );
+			Parallelization.getTaskExecutor().forEach( list, spot -> {
+				updateEllipsoid( spot, source, sourceToGlobal, appModel, vertices.size(), verbose );
+			} );
 		}
-
-		// invoke all generated tasks
-		if ( parallelize )
+		else
 		{
-			try
-			{
-				executorService.invokeAll( todo );
-			}
-			catch ( InterruptedException e )
-			{
-				e.printStackTrace();
-			}
+			for ( Spot spot : vertices )
+				updateEllipsoid( spot, source, sourceToGlobal, appModel, vertices.size(), verbose );
 		}
 
 		System.out.println( "found: " + found.get() + " (" + Math.round( ( double ) found.get() / ( found.get() + notFound.get() ) * 100d )
@@ -92,14 +75,24 @@ public class FitEllipsoidProcessor
 				+ "ms." );
 	}
 
+	private static List< Spot > asArrayList( RefSet< Spot > vertices )
+	{
+		List<Spot> list = new ArrayList<>();
+		for ( final Spot spot : vertices )
+		{
+			Spot spotCopy = vertices.createRef();
+			spotCopy.refTo( spot );
+			list.add( spot );
+		}
+		return list;
+	}
+
 	/**
-	 * Returns the number of ellipsoids that could be fitted.
-	 *
 	 * @return the number of ellipsoids that could be fitted.
 	 */
-	public AtomicInteger getFound()
+	public int getNumFound()
 	{
-		return found;
+		return found.get();
 	}
 
 	private < T extends RealType< T > > void updateEllipsoid( final Spot spot, final SourceAndConverter< T > source,
