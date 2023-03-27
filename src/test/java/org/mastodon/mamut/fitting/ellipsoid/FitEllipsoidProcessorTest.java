@@ -5,6 +5,8 @@ import bdv.viewer.SourceAndConverter;
 import net.imglib2.Interval;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.parallel.Parallelization;
+import net.imglib2.parallel.TaskExecutor;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
@@ -38,11 +40,11 @@ public class FitEllipsoidProcessorTest
 {
 	private static MamutAppModel appModel;
 
-	private static SharedBigDataViewerData sharedBigDataViewerData;
-
 	private static final int COLUMNS = 4;
 
 	private static final int NUMBER_OF_SPOTS = COLUMNS * COLUMNS * COLUMNS;
+
+	private static SourceAndConverter< ? > source;
 
 	@BeforeClass
 	public static void setUp()
@@ -52,7 +54,8 @@ public class FitEllipsoidProcessorTest
 		Keymap keymap = new Keymap();
 		Img< FloatType > image = ArrayImgs.floats( COLUMNS * size, COLUMNS * size, COLUMNS * size );
 		Model model = new Model();
-		sharedBigDataViewerData = BlobRenderingUtils.asSharedBdvDataXyz( image );
+		SharedBigDataViewerData sharedBigDataViewerData = BlobRenderingUtils.asSharedBdvDataXyz( image );
+		source = sharedBigDataViewerData.getSources().get( 0 );
 		appModel = new MamutAppModel( model, sharedBigDataViewerData, new KeyPressedManager(), new TrackSchemeStyleManager(),
 				new DataDisplayStyleManager(), new RenderSettingsManager(), new FeatureColorModeManager(), new KeymapManager(),
 				new MamutPlugins( keymap ), new Actions( keymap.getConfig() ) );
@@ -72,6 +75,8 @@ public class FitEllipsoidProcessorTest
 					// method init generates a spot
 					model.getGraph().addVertex().init( 0, inputCenter, inputCovarianceMatrix );
 				}
+
+		appModel.getModel().getGraph().vertices().forEach( vertex -> appModel.getSelectionModel().setSelected( vertex, true ) );
 	}
 
 	private static double[][] randomizedCovarianceMatrix()
@@ -95,31 +100,27 @@ public class FitEllipsoidProcessorTest
 		MamutViewBdv ts = new MamutViewBdv( appModel, new HashMap<>() );
 		ts.getFrame().setVisible( true );
 	}
-
 	@Test
 	public void testProcess()
 	{
-		final SourceAndConverter< ? > source = sharedBigDataViewerData.getSources().get( 0 );
-		appModel.getModel().getGraph().vertices().forEach( vertex -> appModel.getSelectionModel().setSelected( vertex, true ) );
 
-		long t1 = System.currentTimeMillis();
-		FitEllipsoidProcessor fitEllipsoidProcessorParallel = new FitEllipsoidProcessor();
-		fitEllipsoidProcessorParallel.process( ( SourceAndConverter ) source, appModel, true, false );
-		System.out.println( "Found " + fitEllipsoidProcessorParallel.getFound().get() + " spots (parallel)." );
-		assertEquals( NUMBER_OF_SPOTS, fitEllipsoidProcessorParallel.getFound().get() );
-		long t2 = System.currentTimeMillis();
+		long parallelTime = runBenchmarkReturnRuntime( "parallel", true );
+		long sequentialTime = runBenchmarkReturnRuntime( "sequential", false );
 
-		long t3 = System.currentTimeMillis();
-		FitEllipsoidProcessor fitEllipsoidProcessorSequential = new FitEllipsoidProcessor();
-		fitEllipsoidProcessorSequential.process( ( SourceAndConverter ) source, appModel, false, false );
-		System.out.println( "Found " + fitEllipsoidProcessorSequential.getFound().get() + " spots (sequential)." );
-		assertEquals( NUMBER_OF_SPOTS, fitEllipsoidProcessorSequential.getFound().get() );
-		long t4 = System.currentTimeMillis();
-
-		System.out.println( "Parallel: " + ( t2 - t1 ) + " ms" );
-		System.out.println( "Sequential: " + ( t4 - t3 ) + " ms" );
+		System.out.println( "Parallel: " + parallelTime + " ms" );
+		System.out.println( "Sequential: " + sequentialTime + " ms" );
 		// parallel should be faster, if there is more than 1 core available
 		if ( Runtime.getRuntime().availableProcessors() > 1 )
-			assertTrue( ( t2 - t1 ) < ( t4 - t3 ) );
+			assertTrue( parallelTime < sequentialTime );
+	}
+
+	private static long runBenchmarkReturnRuntime( String title, boolean parallel )
+	{
+		long t1 = System.currentTimeMillis();
+		FitEllipsoidProcessor fitEllipsoidProcessorParallel = new FitEllipsoidProcessor();
+		fitEllipsoidProcessorParallel.process( ( SourceAndConverter ) source, appModel, parallel, false );
+		System.out.println( "Found " + fitEllipsoidProcessorParallel.getNumFound() + " spots (" + title + ")." );
+		assertEquals( NUMBER_OF_SPOTS, fitEllipsoidProcessorParallel.getNumFound() );
+		return System.currentTimeMillis() - t1;
 	}
 }
