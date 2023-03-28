@@ -299,19 +299,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		else
 			input = converted;
 
-		Bdv bdv;
-		if ( DEBUG )
-		{
-			final BdvStackSource< FloatType > inputSource =
-					BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
-			final ConverterSetups setups = appModel.getSharedBdvData().getConverterSetups();
-			final ConverterSetup cs = setups.getConverterSetup( source );
-			final Bounds bounds = setups.getBounds().getBounds( cs );
-			inputSource.setDisplayRange( cs.getDisplayRangeMin(), cs.getDisplayRangeMax() );
-			inputSource.setDisplayRangeBounds( bounds.getMinBound(), bounds.getMaxBound() );
-			bdv = inputSource;
-		}
-
 		final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ),
 				new ArrayImgFactory<>( new FloatType() ), minGradientMagnitude );
 		final AffineTransform3D zeroMinSourceToGlobal = sourceToGlobal.copy();
@@ -323,13 +310,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				Edgels.filterEdgelsByDirection( gEdgels, centerInGlobalCoordinates ), centerInGlobalCoordinates,
 				maxAngle, maxFactor );
 
-		EdgelsOverlay edgelsOverlay;
-		if ( DEBUG )
-		{
-			edgelsOverlay = new EdgelsOverlay( filteredEdgels, 0.01 );
-			BdvFunctions.showOverlay( edgelsOverlay, "filtered edgels", Bdv.options().addTo( bdv ) );
-		}
-
 		final Ellipsoid ellipsoid = SampleEllipsoidEdgel.sample(
 				filteredEdgels,
 				centerInGlobalCoordinates,
@@ -338,46 +318,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				insideCutoffDistance,
 				angleCutoffDistance,
 				maxCenterDistance );
-		final long t2 = System.currentTimeMillis();
-
-		if ( ellipsoid == null )
-		{
-			notFound.getAndIncrement();
-			if ( DEBUG )
-				System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
-			return;
-		}
-		else
-		{
-			found.getAndIncrement();
-			if ( DEBUG )
-				System.out.println( "Computed ellipsoid in " + ( t2 - t1 ) + "ms. Ellipsoid: " + ellipsoid );
-		}
-
-		if ( DEBUG )
-		{
-			BdvFunctions.showOverlay( new EllipsoidOverlay( ellipsoid ), "fitted ellipsoid",
-					Bdv.options().addTo( bdv ) );
-			final Map< Edgel, Double > costs = SampleEllipsoidEdgel.getCosts(
-					filteredEdgels,
-					ellipsoid,
-					outsideCutoffDistance,
-					insideCutoffDistance,
-					angleCutoffDistance );
-			edgelsOverlay.setCosts( costs );
-		}
-
-		if ( DEBUG )
-		{
-			int outputRate = 1000;
-			if ( ( found.get() + notFound.get() ) % outputRate == 0 )
-				System.out
-						.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks
-								+ " ellipsoids ("
-								+ Math.round( ( found.get() + notFound.get() ) / ( double ) totalTasks * 100d )
-								+ "%). Total time: "
-								+ watch.formatTime() );
-		}
+		final long runtime = System.currentTimeMillis() - t1;
 
 		ReentrantReadWriteLock.WriteLock writeLock = appModel.getModel().getGraph().getLock().writeLock();
 		writeLock.lock();
@@ -390,5 +331,62 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		{
 			writeLock.unlock();
 		}
+
+		printReport( spot, ellipsoid, runtime, totalTasks );
+
+		if ( DEBUG )
+			showBdvDebugWindow( source, appModel, totalTasks, outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance, sourceToGlobal, input, filteredEdgels, ellipsoid );
 	}
+
+	private void printReport( Spot spot, Ellipsoid ellipsoid, long runtime, int totalTasks )
+	{
+		if ( ellipsoid == null )
+		{
+			notFound.getAndIncrement();
+			if ( DEBUG )
+				System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
+			return;
+		}
+		else
+		{
+			found.getAndIncrement();
+			if ( DEBUG )
+				System.out.println( "Computed ellipsoid in " + runtime + "ms. Ellipsoid: " + ellipsoid );
+		}
+
+		int outputRate = 1000;
+		if ( DEBUG && ( found.get() + notFound.get() ) % outputRate == 0 )
+			System.out.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks
+					+ " ellipsoids ("
+					+ Math.round( ( found.get() + notFound.get() ) / ( double ) totalTasks * 100d )
+					+ "%). Total time: "
+					+ watch.formatTime() );
+	}
+
+	private void showBdvDebugWindow( SourceAndConverter< ? > source, MamutAppModel appModel, int totalTasks, double outsideCutoffDistance, double insideCutoffDistance, double angleCutoffDistance,
+			AffineTransform3D sourceToGlobal, RandomAccessibleInterval< FloatType > input, ArrayList< Edgel > filteredEdgels, Ellipsoid ellipsoid )
+	{
+		final BdvStackSource< FloatType > inputSource =
+				BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
+		final ConverterSetups setups = appModel.getSharedBdvData().getConverterSetups();
+		final ConverterSetup cs = setups.getConverterSetup( source );
+		final Bounds bounds = setups.getBounds().getBounds( cs );
+		inputSource.setDisplayRange( cs.getDisplayRangeMin(), cs.getDisplayRangeMax() );
+		inputSource.setDisplayRangeBounds( bounds.getMinBound(), bounds.getMaxBound() );
+		Bdv bdv = inputSource.getBdvHandle();
+
+		EdgelsOverlay edgelsOverlay = new EdgelsOverlay( filteredEdgels, 0.01 );
+		BdvFunctions.showOverlay( edgelsOverlay, "filtered edgels", Bdv.options().addTo( bdv ) );
+
+		BdvFunctions.showOverlay( new EllipsoidOverlay( ellipsoid ), "fitted ellipsoid",
+				Bdv.options().addTo( bdv ) );
+		final Map< Edgel, Double > costs = SampleEllipsoidEdgel.getCosts(
+				filteredEdgels,
+				ellipsoid,
+				outsideCutoffDistance,
+				insideCutoffDistance,
+				angleCutoffDistance );
+		edgelsOverlay.setCosts( costs );
+	}
+
 }
