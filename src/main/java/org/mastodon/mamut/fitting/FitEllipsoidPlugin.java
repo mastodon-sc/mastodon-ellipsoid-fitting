@@ -94,11 +94,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 	private static Map< String, String > menuTexts = new HashMap<>();
 
-	private final AtomicInteger found = new AtomicInteger( 0 );
-
-	private final AtomicInteger notFound = new AtomicInteger( 0 );
-
-	private final StopWatch watch = new StopWatch();
 
 	static
 	{
@@ -196,17 +191,54 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			System.err.println( "no vertex selected" );
 
 		// init watch and counters
-		{
-			watch.reset();
-			watch.start();
-			found.set( 0 );
-			notFound.set( 0 );
-		}
+		final AtomicInteger found = new AtomicInteger( 0 );
+		final AtomicInteger notFound = new AtomicInteger( 0 );
+		final StopWatch watch = new StopWatch();
+		watch.start();
 
 		// parallelize over vertices
-		ArrayList< Spot > list = asArrayList( vertices ); // NB: RefSet is not thread-safe for iteration
-		Parallelization.getTaskExecutor().forEach( list, spot -> {
-			processSpot( spot, source, appModel, vertices.size() );
+		ArrayList< Spot > threadSafeVertices = asArrayList( vertices ); // NB: RefSet is not thread-safe for iteration
+		int totalTasks = vertices.size();
+		ReentrantReadWriteLock.WriteLock writeLock = appModel.getModel().getGraph().getLock().writeLock();
+
+		Parallelization.getTaskExecutor().forEach( threadSafeVertices, spot -> { // loop over vertices in parallel using multiple threads
+
+			final long t1 = System.currentTimeMillis();
+			final Ellipsoid ellipsoid = fitEllipsoid( spot, source, appModel );
+			final long runtime = System.currentTimeMillis() - t1;
+
+			if ( ellipsoid != null )
+			{
+				writeLock.lock();
+				try
+				{
+					spot.setPosition( ellipsoid );
+					spot.setCovariance( ellipsoid.getCovariance() );
+				}
+				finally
+				{
+					writeLock.unlock();
+				}
+
+				found.getAndIncrement();
+				if ( DEBUG )
+					System.out.println( "Computed ellipsoid in " + runtime + "ms. Ellipsoid: " + ellipsoid );
+			}
+			else
+			{
+				notFound.getAndIncrement();
+				if ( DEBUG )
+					System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
+			}
+
+			int outputRate = 1000;
+			if ( DEBUG && ( found.get() + notFound.get() ) % outputRate == 0 )
+				System.out.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks
+						+ " ellipsoids ("
+						+ Math.round( ( found.get() + notFound.get() ) / ( double ) totalTasks * 100d )
+						+ "%). Total time: "
+						+ watch.formatTime() );
+
 		} );
 
 		System.out.println( "found: " + found.get() + " ("
@@ -230,9 +262,8 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		return list;
 	}
 
-	private void processSpot( Spot spot, SourceAndConverter< ? > source, MamutAppModel appModel, int totalTasks )
+	private Ellipsoid fitEllipsoid( Spot spot, SourceAndConverter< ? > source, MamutAppModel appModel )
 	{
-		final long t1 = System.currentTimeMillis();
 		// TODO: parameters -----------------
 		final double smoothSigma = 2;
 
@@ -253,7 +284,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		AffineTransform3D sourceToGlobal = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
 		RandomAccessibleInterval< ? > frame = source.getSpimSource().getSource( timepoint, 0 );
-
 
 		final RandomAccessibleInterval< ? > cropped =
 				cropSpot( sourceToGlobal, frame, spot );
@@ -278,24 +308,10 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				insideCutoffDistance,
 				angleCutoffDistance,
 				maxCenterDistance );
-		final long runtime = System.currentTimeMillis() - t1;
-
-		ReentrantReadWriteLock.WriteLock writeLock = appModel.getModel().getGraph().getLock().writeLock();
-		writeLock.lock();
-		try
-		{
-			spot.setPosition( ellipsoid );
-			spot.setCovariance( ellipsoid.getCovariance() );
-		}
-		finally
-		{
-			writeLock.unlock();
-		}
-
-		printReport( spot, ellipsoid, runtime, totalTasks );
 
 		if ( DEBUG )
 			showBdvDebugWindow( source, appModel, outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance, sourceToGlobal, input, filteredEdgels, ellipsoid );
+		return ellipsoid;
 	}
 
 	private static RandomAccessibleInterval< ? > cropSpot( AffineTransform3D sourceToGlobal, RandomAccessibleInterval< ? > frame, Spot spot )
@@ -317,9 +333,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			lMax[ d ] = ( long ) ( centerInLocalCoordinates[ d ] + halfsize );
 		}
 
-		final RandomAccessibleInterval< ? > cropped = Views
-				.interval( Views.extendBorder( frame ), lMin, lMax );
-		return cropped;
+		return Views.interval( Views.extendBorder( frame ), lMin, lMax );
 	}
 
 	private static RandomAccessibleInterval< FloatType > gaussianBlur( double sigma, double[] scale, RandomAccessibleInterval< FloatType > input )
@@ -352,8 +366,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		final long[] lMin = input.minAsLongArray();
 		shiftToMin.translate( lMin[ 0 ], lMin[ 1 ], lMin[ 2 ] );
 		zeroMinSourceToGlobal.concatenate( shiftToMin );
-		final ArrayList< Edgel > gEdgels = Edgels.transformEdgels( lEdgels, zeroMinSourceToGlobal );
-		return gEdgels;
+		return Edgels.transformEdgels( lEdgels, zeroMinSourceToGlobal );
 	}
 
 	private static double[] extractScale( AffineTransform3D sourceToGlobal )
@@ -362,31 +375,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		for ( int d = 0; d < 3; ++d )
 			scale[ d ] = Affine3DHelpers.extractScale( sourceToGlobal, d );
 		return scale;
-	}
-
-	private void printReport( Spot spot, Ellipsoid ellipsoid, long runtime, int totalTasks )
-	{
-		if ( ellipsoid == null )
-		{
-			notFound.getAndIncrement();
-			if ( DEBUG )
-				System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
-			return;
-		}
-		else
-		{
-			found.getAndIncrement();
-			if ( DEBUG )
-				System.out.println( "Computed ellipsoid in " + runtime + "ms. Ellipsoid: " + ellipsoid );
-		}
-
-		int outputRate = 1000;
-		if ( DEBUG && ( found.get() + notFound.get() ) % outputRate == 0 )
-			System.out.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks
-					+ " ellipsoids ("
-					+ Math.round( ( found.get() + notFound.get() ) / ( double ) totalTasks * 100d )
-					+ "%). Total time: "
-					+ watch.formatTime() );
 	}
 
 	private void showBdvDebugWindow( SourceAndConverter< ? > source, MamutAppModel appModel, double outsideCutoffDistance, double insideCutoffDistance, double angleCutoffDistance,
@@ -414,5 +402,4 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				angleCutoffDistance );
 		edgelsOverlay.setCosts( costs );
 	}
-
 }
