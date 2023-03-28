@@ -252,60 +252,20 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		final int timepoint = spot.getTimepoint();
 		AffineTransform3D sourceToGlobal = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
+		RandomAccessibleInterval< ? > frame = source.getSpimSource().getSource( timepoint, 0 );
 
-		final double[] centerInGlobalCoordinates = new double[ 3 ];
-		final double[] centerInLocalCoordinates = new double[ 3 ];
-		spot.localize( centerInGlobalCoordinates );
-		sourceToGlobal.applyInverse( centerInLocalCoordinates, centerInGlobalCoordinates );
 
-		final double[] scale = new double[ 3 ];
-		for ( int d = 0; d < 3; ++d )
-			scale[ d ] = Affine3DHelpers.extractScale( sourceToGlobal, d );
+		final RandomAccessibleInterval< ? > cropped =
+				cropSpot( sourceToGlobal, frame, spot );
 
-		final long[] lMin = new long[ 3 ];
-		final long[] lMax = new long[ 3 ];
-
-		final double radius = Math.sqrt( spot.getBoundingSphereRadiusSquared() );
-		for ( int d = 0; d < 3; ++d )
-		{
-			final double halfsize = 2 * radius / scale[ d ] + 2;
-			lMin[ d ] = ( long ) ( centerInLocalCoordinates[ d ] - halfsize );
-			lMax[ d ] = ( long ) ( centerInLocalCoordinates[ d ] + halfsize );
-		}
-
-		final RandomAccessibleInterval< ? > cropped = Views
-				.interval( Views.extendBorder( source.getSpimSource().getSource( timepoint, 0 ) ), lMin, lMax );
 		final RandomAccessibleInterval< FloatType > converted =
 				RealTypeConverters.convert( Cast.unchecked( cropped ), new FloatType() );
 
-		final RandomAccessibleInterval< FloatType > input;
-		if ( smoothSigma > 0 )
-		{
-			long[] widthHeightDepth = cropped.dimensionsAsLongArray();
-			final RandomAccessibleInterval< FloatType > img = ArrayImgs.floats( widthHeightDepth );
-			final double[] sigmas = new double[ 3 ];
-			for ( int d = 0; d < 3; ++d )
-				sigmas[ d ] = smoothSigma / scale[ d ];
-			try
-			{
-				Gauss3.gauss( sigmas, Views.extendMirrorSingle( Views.zeroMin( converted ) ), img );
-			}
-			catch ( final IncompatibleTypeException e )
-			{
-				e.printStackTrace();
-			}
-			input = Views.translate( img, lMin );
-		}
-		else
-			input = converted;
+		final RandomAccessibleInterval< FloatType > input = gaussianBlur( smoothSigma, extractScale( sourceToGlobal ), converted );
 
-		final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ),
-				new ArrayImgFactory<>( new FloatType() ), minGradientMagnitude );
-		final AffineTransform3D zeroMinSourceToGlobal = sourceToGlobal.copy();
-		final AffineTransform3D shiftToMin = new AffineTransform3D();
-		shiftToMin.translate( lMin[ 0 ], lMin[ 1 ], lMin[ 2 ] );
-		zeroMinSourceToGlobal.concatenate( shiftToMin );
-		final ArrayList< Edgel > gEdgels = Edgels.transformEdgels( lEdgels, zeroMinSourceToGlobal );
+		final ArrayList< Edgel > gEdgels = getAllEgels( minGradientMagnitude, sourceToGlobal, input );
+
+		final double[] centerInGlobalCoordinates = spot.positionAsDoubleArray();
 		final ArrayList< Edgel > filteredEdgels = Edgels.filterEdgelsByOcclusion(
 				Edgels.filterEdgelsByDirection( gEdgels, centerInGlobalCoordinates ), centerInGlobalCoordinates,
 				maxAngle, maxFactor );
@@ -335,7 +295,73 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		printReport( spot, ellipsoid, runtime, totalTasks );
 
 		if ( DEBUG )
-			showBdvDebugWindow( source, appModel, totalTasks, outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance, sourceToGlobal, input, filteredEdgels, ellipsoid );
+			showBdvDebugWindow( source, appModel, outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance, sourceToGlobal, input, filteredEdgels, ellipsoid );
+	}
+
+	private static RandomAccessibleInterval< ? > cropSpot( AffineTransform3D sourceToGlobal, RandomAccessibleInterval< ? > frame, Spot spot )
+	{
+		final double[] centerInGlobalCoordinates = spot.positionAsDoubleArray();
+		final double radius = Math.sqrt( spot.getBoundingSphereRadiusSquared() );
+		final double[] centerInLocalCoordinates = new double[ 3 ];
+		sourceToGlobal.applyInverse( centerInLocalCoordinates, centerInGlobalCoordinates );
+
+		final double[] scale = extractScale( sourceToGlobal );
+
+		final long[] lMin = new long[ 3 ];
+		final long[] lMax = new long[ 3 ];
+
+		for ( int d = 0; d < 3; ++d )
+		{
+			final double halfsize = 2 * radius / scale[ d ] + 2;
+			lMin[ d ] = ( long ) ( centerInLocalCoordinates[ d ] - halfsize );
+			lMax[ d ] = ( long ) ( centerInLocalCoordinates[ d ] + halfsize );
+		}
+
+		final RandomAccessibleInterval< ? > cropped = Views
+				.interval( Views.extendBorder( frame ), lMin, lMax );
+		return cropped;
+	}
+
+	private static RandomAccessibleInterval< FloatType > gaussianBlur( double sigma, double[] scale, RandomAccessibleInterval< FloatType > input )
+	{
+		if( sigma <= 0.0 )
+			return input;
+		long[] size = input.dimensionsAsLongArray();
+		long[] min = input.minAsLongArray();
+		final RandomAccessibleInterval< FloatType > img = ArrayImgs.floats( size );
+		final double[] sigmas = new double[ 3 ];
+		for ( int d = 0; d < 3; ++d )
+			sigmas[ d ] = sigma / scale[ d ];
+		try
+		{
+			Gauss3.gauss( sigmas, Views.extendMirrorSingle( Views.zeroMin( input ) ), img );
+		}
+		catch ( final IncompatibleTypeException e )
+		{
+			e.printStackTrace();
+		}
+		return Views.translate( img, min );
+	}
+
+	private static ArrayList< Edgel > getAllEgels( double minGradientMagnitude, AffineTransform3D sourceToGlobal, RandomAccessibleInterval< FloatType > input )
+	{
+		final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ),
+				new ArrayImgFactory<>( new FloatType() ), minGradientMagnitude );
+		final AffineTransform3D zeroMinSourceToGlobal = sourceToGlobal.copy();
+		final AffineTransform3D shiftToMin = new AffineTransform3D();
+		final long[] lMin = input.minAsLongArray();
+		shiftToMin.translate( lMin[ 0 ], lMin[ 1 ], lMin[ 2 ] );
+		zeroMinSourceToGlobal.concatenate( shiftToMin );
+		final ArrayList< Edgel > gEdgels = Edgels.transformEdgels( lEdgels, zeroMinSourceToGlobal );
+		return gEdgels;
+	}
+
+	private static double[] extractScale( AffineTransform3D sourceToGlobal )
+	{
+		final double[] scale = new double[ 3 ];
+		for ( int d = 0; d < 3; ++d )
+			scale[ d ] = Affine3DHelpers.extractScale( sourceToGlobal, d );
+		return scale;
 	}
 
 	private void printReport( Spot spot, Ellipsoid ellipsoid, long runtime, int totalTasks )
@@ -363,7 +389,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 					+ watch.formatTime() );
 	}
 
-	private void showBdvDebugWindow( SourceAndConverter< ? > source, MamutAppModel appModel, int totalTasks, double outsideCutoffDistance, double insideCutoffDistance, double angleCutoffDistance,
+	private void showBdvDebugWindow( SourceAndConverter< ? > source, MamutAppModel appModel, double outsideCutoffDistance, double insideCutoffDistance, double angleCutoffDistance,
 			AffineTransform3D sourceToGlobal, RandomAccessibleInterval< FloatType > input, ArrayList< Edgel > filteredEdgels, Ellipsoid ellipsoid )
 	{
 		final BdvStackSource< FloatType > inputSource =
