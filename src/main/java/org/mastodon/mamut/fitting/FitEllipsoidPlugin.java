@@ -37,10 +37,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.BiConsumer;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.mastodon.app.ui.ViewMenuBuilder;
@@ -71,20 +69,20 @@ import bdv.util.BdvStackSource;
 import bdv.util.Bounds;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.SourceAndConverter;
-import net.imglib2.EuclideanSpace;
-import net.imglib2.Interval;
+
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.edge.Edgel;
 import net.imglib2.algorithm.edge.SubpixelEdgelDetection;
 import net.imglib2.algorithm.gauss3.Gauss3;
-import net.imglib2.converter.Converters;
-import net.imglib2.converter.RealFloatConverter;
+import net.imglib2.converter.RealTypeConverters;
 import net.imglib2.exception.IncompatibleTypeException;
 import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.parallel.Parallelization;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Cast;
 import net.imglib2.view.Views;
 
 @Plugin( type = FitEllipsoidPlugin.class )
@@ -172,7 +170,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		fitSelectedVerticesAction.setEnabled( appModel != null );
 	}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	void fitSelectedVertices()
 	{
 		// TODO: parameters to select which source to act on
@@ -184,15 +181,13 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			final SourceAndConverter< ? > source = appModel.getSharedBdvData().getSources().get( sourceIndex );
 			if ( !( source.getSpimSource().getType() instanceof RealType ) )
 				throw new IllegalArgumentException( "Expected RealType image source" );
-
-			process( ( SourceAndConverter ) source );
+			process( source );
 		}
 	}
 
 	private static final boolean DEBUG = false;
 
-	@SuppressWarnings( "unused" )
-	private < T extends RealType< T > > void process( final SourceAndConverter< T > source )
+	private void process( final SourceAndConverter< ? > source )
 	{
 		final MamutAppModel appModel = pluginAppModel.getAppModel();
 
@@ -200,7 +195,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		if ( vertices.isEmpty() )
 			System.err.println( "no vertex selected" );
 
-		final AffineTransform3D sourceToGlobal = new AffineTransform3D();
 		// init watch and counters
 		{
 			watch.reset();
@@ -209,29 +203,11 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			notFound.set( 0 );
 		}
 
-		// Fixed thread number depending on the number of available processors
-		int processors = Runtime.getRuntime().availableProcessors();
-		ExecutorService executorService = Executors.newFixedThreadPool( processors );
-		List< Callable< Object > > todo = new ArrayList<>( vertices.size() );
-
 		// parallelize over vertices
-		for ( final Spot spot : vertices )
-		{
-			Spot spotCopy = appModel.getModel().getGraph().vertexRef();
-			spotCopy.refTo( spot );
-			todo.add( Executors.callable(
-					new SpotEllipsoidFittingTask<>( spotCopy, source, sourceToGlobal, appModel, vertices.size() ) ) );
-		}
-
-		// invoke all tasks
-		try
-		{
-			executorService.invokeAll( todo );
-		}
-		catch ( InterruptedException e )
-		{
-			e.printStackTrace();
-		}
+		ArrayList< Spot > list = asArrayList( vertices ); // NB: RefSet is not thread-safe for iteration
+		Parallelization.getTaskExecutor().forEach( list, spot -> {
+			processSpot( spot, source, appModel, vertices.size() );
+		} );
 
 		System.out.println( "found: " + found.get() + " ("
 				+ Math.round( ( double ) found.get() / ( found.get() + notFound.get() ) * 100d )
@@ -242,197 +218,177 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				+ "ms." );
 	}
 
-	// TODO: move to imglib2 core and make versions for int[], double[] ???
-	public static < T extends EuclideanSpace > long[] longArrayFrom( final T t, final BiConsumer< T, long[] > get )
+	private static ArrayList< Spot > asArrayList( RefSet< Spot > vertices )
 	{
-		final long[] a = new long[ t.numDimensions() ];
-		get.accept( t, a );
-		return a;
+		ArrayList< Spot > list = new ArrayList<>();
+		for ( final Spot spot : vertices )
+		{
+			Spot spotCopy = vertices.createRef();
+			spotCopy.refTo( spot );
+			list.add( spotCopy );
+		}
+		return list;
 	}
 
-	private class SpotEllipsoidFittingTask< T extends RealType< T > > implements Runnable
+	private void processSpot( Spot spot, SourceAndConverter< ? > source, MamutAppModel appModel, int totalTasks )
 	{
-		private final Spot spot;
+		final long t1 = System.currentTimeMillis();
+		// TODO: parameters -----------------
+		final double smoothSigma = 2;
 
-		private final SourceAndConverter< T > source;
+		final double minGradientMagnitude = 10;
 
-		private final AffineTransform3D sourceToGlobal;
+		final double maxAngle = 5 * Math.PI / 180.0;
+		final double maxFactor = 1.1;
 
-		private final MamutAppModel appModel;
+		// TODO: test with different values, e.g. 100 and 1000 and see how many ellipsoids are found
+		final int numSamples = 1000;
+		final double outsideCutoffDistance = 3;
+		final double insideCutoffDistance = 5;
+		final double angleCutoffDistance = 30 * Math.PI / 180.0;
+		final double maxCenterDistance = 10;
+		// ----------------------------------
 
-		private final int totalTasks;
+		final int timepoint = spot.getTimepoint();
+		AffineTransform3D sourceToGlobal = new AffineTransform3D();
+		source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
 
-		public SpotEllipsoidFittingTask(
-				final Spot spot, final SourceAndConverter< T > source, final AffineTransform3D sourceToGlobal,
-				final MamutAppModel appModel, final int totalTasks )
+		final double[] centerInGlobalCoordinates = new double[ 3 ];
+		final double[] centerInLocalCoordinates = new double[ 3 ];
+		spot.localize( centerInGlobalCoordinates );
+		sourceToGlobal.applyInverse( centerInLocalCoordinates, centerInGlobalCoordinates );
+
+		final double[] scale = new double[ 3 ];
+		for ( int d = 0; d < 3; ++d )
+			scale[ d ] = Affine3DHelpers.extractScale( sourceToGlobal, d );
+
+		final long[] lMin = new long[ 3 ];
+		final long[] lMax = new long[ 3 ];
+
+		final double radius = Math.sqrt( spot.getBoundingSphereRadiusSquared() );
+		for ( int d = 0; d < 3; ++d )
 		{
-			this.spot = spot;
-			this.source = source;
-			this.sourceToGlobal = sourceToGlobal;
-			this.appModel = appModel;
-			this.totalTasks = totalTasks;
+			final double halfsize = 2 * radius / scale[ d ] + 2;
+			lMin[ d ] = ( long ) ( centerInLocalCoordinates[ d ] - halfsize );
+			lMax[ d ] = ( long ) ( centerInLocalCoordinates[ d ] + halfsize );
 		}
 
-		@Override
-		public void run()
+		final RandomAccessibleInterval< ? > cropped = Views
+				.interval( Views.extendBorder( source.getSpimSource().getSource( timepoint, 0 ) ), lMin, lMax );
+		final RandomAccessibleInterval< FloatType > converted =
+				RealTypeConverters.convert( Cast.unchecked( cropped ), new FloatType() );
+
+		final RandomAccessibleInterval< FloatType > input;
+		if ( smoothSigma > 0 )
 		{
-			// TODO: parameters -----------------
-			final double smoothSigma = 2;
-
-			final double minGradientMagnitude = 10;
-
-			final double maxAngle = 5 * Math.PI / 180.0;
-			final double maxFactor = 1.1;
-
-			// TODO: test with different values, e.g. 100 and 1000 and see how many ellipsoids are found
-			final int numSamples = 1000;
-			final double outsideCutoffDistance = 3;
-			final double insideCutoffDistance = 5;
-			final double angleCutoffDistance = 30 * Math.PI / 180.0;
-			final double maxCenterDistance = 10;
-			// ----------------------------------
-
-			final int timepoint = spot.getTimepoint();
-			source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
-
-			final double[] centerInGlobalCoordinates = new double[ 3 ];
-			final double[] centerInLocalCoordinates = new double[ 3 ];
-			spot.localize( centerInGlobalCoordinates );
-			sourceToGlobal.applyInverse( centerInLocalCoordinates, centerInGlobalCoordinates );
-
-			final double[] scale = new double[ 3 ];
+			long[] widthHeightDepth = cropped.dimensionsAsLongArray();
+			final RandomAccessibleInterval< FloatType > img = ArrayImgs.floats( widthHeightDepth );
+			final double[] sigmas = new double[ 3 ];
 			for ( int d = 0; d < 3; ++d )
-				scale[ d ] = Affine3DHelpers.extractScale( sourceToGlobal, d );
-
-			final long[] lMin = new long[ 3 ];
-			final long[] lMax = new long[ 3 ];
-
-			final double radius = Math.sqrt( spot.getBoundingSphereRadiusSquared() );
-			for ( int d = 0; d < 3; ++d )
-			{
-				final double halfsize = 2 * radius / scale[ d ] + 2;
-				lMin[ d ] = ( long ) ( centerInLocalCoordinates[ d ] - halfsize );
-				lMax[ d ] = ( long ) ( centerInLocalCoordinates[ d ] + halfsize );
-			}
-
-			final RandomAccessibleInterval< T > cropped = Views
-					.interval( Views.extendBorder( source.getSpimSource().getSource( timepoint, 0 ) ), lMin, lMax );
-			final RandomAccessibleInterval< FloatType > converted =
-					Converters.convert( cropped, new RealFloatConverter<>(), new FloatType() );
-
-			final RandomAccessibleInterval< FloatType > input;
-			if ( smoothSigma > 0 )
-			{
-				long[] widthHeightDepth = longArrayFrom( cropped, Interval::dimensions );
-				final RandomAccessibleInterval< FloatType > img = ArrayImgs.floats( widthHeightDepth );
-				final double[] sigmas = new double[ 3 ];
-				for ( int d = 0; d < 3; ++d )
-					sigmas[ d ] = smoothSigma / scale[ d ];
-				try
-				{
-					Gauss3.gauss( sigmas, Views.extendMirrorSingle( Views.zeroMin( converted ) ), img );
-				}
-				catch ( final IncompatibleTypeException e )
-				{
-					e.printStackTrace();
-				}
-				input = Views.translate( img, lMin );
-			}
-			else
-				input = converted;
-
-			Bdv bdv;
-			if ( DEBUG )
-			{
-				final BdvStackSource< FloatType > inputSource =
-						BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
-				final ConverterSetups setups = appModel.getSharedBdvData().getConverterSetups();
-				final ConverterSetup cs = setups.getConverterSetup( source );
-				final Bounds bounds = setups.getBounds().getBounds( cs );
-				inputSource.setDisplayRange( cs.getDisplayRangeMin(), cs.getDisplayRangeMax() );
-				inputSource.setDisplayRangeBounds( bounds.getMinBound(), bounds.getMaxBound() );
-				bdv = inputSource;
-			}
-
-			final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ),
-					new ArrayImgFactory<>( new FloatType() ), minGradientMagnitude );
-			final AffineTransform3D zeroMinSourceToGlobal = sourceToGlobal.copy();
-			final AffineTransform3D shiftToMin = new AffineTransform3D();
-			shiftToMin.translate( lMin[ 0 ], lMin[ 1 ], lMin[ 2 ] );
-			zeroMinSourceToGlobal.concatenate( shiftToMin );
-			final ArrayList< Edgel > gEdgels = Edgels.transformEdgels( lEdgels, zeroMinSourceToGlobal );
-			final ArrayList< Edgel > filteredEdgels = Edgels.filterEdgelsByOcclusion(
-					Edgels.filterEdgelsByDirection( gEdgels, centerInGlobalCoordinates ), centerInGlobalCoordinates,
-					maxAngle, maxFactor );
-
-			EdgelsOverlay edgelsOverlay;
-			if ( DEBUG )
-			{
-				edgelsOverlay = new EdgelsOverlay( filteredEdgels, 0.01 );
-				BdvFunctions.showOverlay( edgelsOverlay, "filtered edgels", Bdv.options().addTo( bdv ) );
-			}
-
-			final long t1 = System.currentTimeMillis();
-			final Ellipsoid ellipsoid = SampleEllipsoidEdgel.sample(
-					filteredEdgels,
-					centerInGlobalCoordinates,
-					numSamples,
-					outsideCutoffDistance,
-					insideCutoffDistance,
-					angleCutoffDistance,
-					maxCenterDistance );
-			final long t2 = System.currentTimeMillis();
-
-			if ( ellipsoid == null )
-			{
-				notFound.getAndIncrement();
-				if ( DEBUG )
-					System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
-				return;
-			}
-			else
-			{
-				found.getAndIncrement();
-				if ( DEBUG )
-					System.out.println( "Computed ellipsoid in " + ( t2 - t1 ) + "ms. Ellipsoid: " + ellipsoid );
-			}
-
-			if ( DEBUG )
-			{
-				BdvFunctions.showOverlay( new EllipsoidOverlay( ellipsoid ), "fitted ellipsoid",
-						Bdv.options().addTo( bdv ) );
-				final Map< Edgel, Double > costs = SampleEllipsoidEdgel.getCosts(
-						filteredEdgels,
-						ellipsoid,
-						outsideCutoffDistance,
-						insideCutoffDistance,
-						angleCutoffDistance );
-				edgelsOverlay.setCosts( costs );
-			}
-
-			if ( DEBUG )
-			{
-				int outputRate = 1000;
-				if ( ( found.get() + notFound.get() ) % outputRate == 0 )
-					System.out
-							.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks
-									+ " ellipsoids ("
-									+ Math.round( ( found.get() + notFound.get() ) / ( double ) totalTasks * 100d )
-									+ "%). Total time: "
-									+ watch.formatTime() );
-			}
-
-			ReentrantReadWriteLock.WriteLock writeLock = appModel.getModel().getGraph().getLock().writeLock();
-			writeLock.lock();
+				sigmas[ d ] = smoothSigma / scale[ d ];
 			try
 			{
-				spot.setPosition( ellipsoid );
-				spot.setCovariance( ellipsoid.getCovariance() );
+				Gauss3.gauss( sigmas, Views.extendMirrorSingle( Views.zeroMin( converted ) ), img );
 			}
-			finally
+			catch ( final IncompatibleTypeException e )
 			{
-				writeLock.unlock();
+				e.printStackTrace();
 			}
+			input = Views.translate( img, lMin );
+		}
+		else
+			input = converted;
+
+		Bdv bdv;
+		if ( DEBUG )
+		{
+			final BdvStackSource< FloatType > inputSource =
+					BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
+			final ConverterSetups setups = appModel.getSharedBdvData().getConverterSetups();
+			final ConverterSetup cs = setups.getConverterSetup( source );
+			final Bounds bounds = setups.getBounds().getBounds( cs );
+			inputSource.setDisplayRange( cs.getDisplayRangeMin(), cs.getDisplayRangeMax() );
+			inputSource.setDisplayRangeBounds( bounds.getMinBound(), bounds.getMaxBound() );
+			bdv = inputSource;
+		}
+
+		final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ),
+				new ArrayImgFactory<>( new FloatType() ), minGradientMagnitude );
+		final AffineTransform3D zeroMinSourceToGlobal = sourceToGlobal.copy();
+		final AffineTransform3D shiftToMin = new AffineTransform3D();
+		shiftToMin.translate( lMin[ 0 ], lMin[ 1 ], lMin[ 2 ] );
+		zeroMinSourceToGlobal.concatenate( shiftToMin );
+		final ArrayList< Edgel > gEdgels = Edgels.transformEdgels( lEdgels, zeroMinSourceToGlobal );
+		final ArrayList< Edgel > filteredEdgels = Edgels.filterEdgelsByOcclusion(
+				Edgels.filterEdgelsByDirection( gEdgels, centerInGlobalCoordinates ), centerInGlobalCoordinates,
+				maxAngle, maxFactor );
+
+		EdgelsOverlay edgelsOverlay;
+		if ( DEBUG )
+		{
+			edgelsOverlay = new EdgelsOverlay( filteredEdgels, 0.01 );
+			BdvFunctions.showOverlay( edgelsOverlay, "filtered edgels", Bdv.options().addTo( bdv ) );
+		}
+
+		final Ellipsoid ellipsoid = SampleEllipsoidEdgel.sample(
+				filteredEdgels,
+				centerInGlobalCoordinates,
+				numSamples,
+				outsideCutoffDistance,
+				insideCutoffDistance,
+				angleCutoffDistance,
+				maxCenterDistance );
+		final long t2 = System.currentTimeMillis();
+
+		if ( ellipsoid == null )
+		{
+			notFound.getAndIncrement();
+			if ( DEBUG )
+				System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
+			return;
+		}
+		else
+		{
+			found.getAndIncrement();
+			if ( DEBUG )
+				System.out.println( "Computed ellipsoid in " + ( t2 - t1 ) + "ms. Ellipsoid: " + ellipsoid );
+		}
+
+		if ( DEBUG )
+		{
+			BdvFunctions.showOverlay( new EllipsoidOverlay( ellipsoid ), "fitted ellipsoid",
+					Bdv.options().addTo( bdv ) );
+			final Map< Edgel, Double > costs = SampleEllipsoidEdgel.getCosts(
+					filteredEdgels,
+					ellipsoid,
+					outsideCutoffDistance,
+					insideCutoffDistance,
+					angleCutoffDistance );
+			edgelsOverlay.setCosts( costs );
+		}
+
+		if ( DEBUG )
+		{
+			int outputRate = 1000;
+			if ( ( found.get() + notFound.get() ) % outputRate == 0 )
+				System.out
+						.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks
+								+ " ellipsoids ("
+								+ Math.round( ( found.get() + notFound.get() ) / ( double ) totalTasks * 100d )
+								+ "%). Total time: "
+								+ watch.formatTime() );
+		}
+
+		ReentrantReadWriteLock.WriteLock writeLock = appModel.getModel().getGraph().getLock().writeLock();
+		writeLock.lock();
+		try
+		{
+			spot.setPosition( ellipsoid );
+			spot.setCovariance( ellipsoid.getCovariance() );
+		}
+		finally
+		{
+			writeLock.unlock();
 		}
 	}
 }
