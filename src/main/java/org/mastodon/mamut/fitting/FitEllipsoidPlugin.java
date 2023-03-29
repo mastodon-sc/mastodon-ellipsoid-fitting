@@ -70,6 +70,8 @@ import bdv.util.Bounds;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.SourceAndConverter;
 
+import net.imglib2.FinalInterval;
+import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.edge.Edgel;
 import net.imglib2.algorithm.edge.SubpixelEdgelDetection;
@@ -83,6 +85,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Cast;
+import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 
 @Plugin( type = FitEllipsoidPlugin.class )
@@ -334,7 +337,10 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			lMax[ d ] = ( long ) ( centerInLocalCoordinates[ d ] + halfsize );
 		}
 
-		return Views.interval( Views.extendBorder( frame ), lMin, lMax );
+		Interval interval = FinalInterval.wrap( lMin, lMax );
+		interval = Intervals.intersect( interval, frame );
+
+		return Views.interval( frame, interval );
 	}
 
 	private static RandomAccessibleInterval< FloatType > gaussianBlur( double sigma, double[] scale, RandomAccessibleInterval< FloatType > input )
