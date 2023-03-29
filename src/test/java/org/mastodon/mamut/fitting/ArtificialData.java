@@ -29,7 +29,7 @@
 package org.mastodon.mamut.fitting;
 
 import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
 
 import net.imagej.ImgPlus;
 import net.imagej.axis.Axes;
@@ -42,6 +42,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
 import net.imglib2.util.LinAlgHelpers;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 import org.mastodon.collection.RefObjectMap;
@@ -70,6 +71,8 @@ import ij.ImagePlus;
 public class ArtificialData
 {
 
+	private final Random random = new Random( 1 );
+
 	private final int size = 80;
 
 	private final int columns = 4;
@@ -96,12 +99,19 @@ public class ArtificialData
 					Spot spot = model.getGraph().addVertex(ref);
 					spot.init( 0, center, 10 );
 					ellipsoids.put( spot, ellipsoid );
-					MultiVariantNormalDistributionRenderer.renderMultivariateNormalDistribution( ellipsoid.getCenter(), ellipsoid.getCovariance(), Views.interval( image, interval ) );
+					drawSpot( image, interval, ellipsoid );
 				}
 
 		appModel = wrapAsAppModel( image, model );
-		//source = appModel.getSharedBdvData().getSources().get( 0 );
 		selectAllVerticies();
+	}
+
+	private static void drawSpot( Img< FloatType > image, Interval interval, Ellipsoid ellipsoid )
+	{
+		IntervalView< FloatType > crop = Views.interval( image, interval );
+		MultiVariantNormalDistributionRenderer.renderMultivariateNormalDistribution(
+				ellipsoid.getCenter(), ellipsoid.getCovariance(),
+				crop );
 	}
 
 	private static SharedBigDataViewerData asSharedBdvDataXyz( Img< FloatType > image1 )
@@ -116,29 +126,34 @@ public class ArtificialData
 			appModel.getSelectionModel().setSelected( vertex, true );
 	}
 
-	private static Ellipsoid randomizedEllipsoid( double[] center )
+	private Ellipsoid randomizedEllipsoid( double[] center )
 	{
 		double[][] inputCovarianceMatrix = randomizedCovarianceMatrix();
-		double[] offset = {
-				ThreadLocalRandom.current().nextDouble(- 5, 5),
-				ThreadLocalRandom.current().nextDouble(- 5, 5),
-				ThreadLocalRandom.current().nextDouble(- 5, 5)
-		};
-		double[] randomizedCenter = new double[ 3 ];
-		LinAlgHelpers.add( center, offset, randomizedCenter );
+		double[] randomizedCenter = randomizeCenter( center );
 		return new Ellipsoid( randomizedCenter, inputCovarianceMatrix, null, null, null );
 	}
 
-	private static double[][] randomizedCovarianceMatrix()
+	private double[] randomizeCenter( double[] center )
+	{
+		double[] offset = {
+				randomDouble(- 5, 5),
+				randomDouble(- 5, 5),
+				randomDouble(- 5, 5)
+		};
+		double[] randomizedCenter = new double[ 3 ];
+		LinAlgHelpers.add( center, offset, randomizedCenter );
+		return randomizedCenter;
+	}
+
+	private double[][] randomizedCovarianceMatrix()
 	{
 		AffineTransform3D a = new AffineTransform3D();
-		ThreadLocalRandom random = ThreadLocalRandom.current();
 		double minAxis = 8;
-		int maxAxis = 16;
-		a.scale( random.nextDouble( minAxis, maxAxis ), random.nextDouble( minAxis, maxAxis ), random.nextDouble( minAxis, maxAxis ) );
-		a.rotate( 0, random.nextDouble( 0, 2 * Math.PI ) );
-		a.rotate( 1, random.nextDouble( 0, 2 * Math.PI ) );
-		a.rotate( 2, random.nextDouble( 0, 2 * Math.PI ) );
+		double maxAxis = 16;
+		a.scale( randomDouble( minAxis, maxAxis ), randomDouble( minAxis, maxAxis ), randomDouble( minAxis, maxAxis ) );
+		a.rotate( 0, randomDouble( 0, 2 * Math.PI ) );
+		a.rotate( 1, randomDouble( 0, 2 * Math.PI ) );
+		a.rotate( 2, randomDouble( 0, 2 * Math.PI ) );
 		AffineTransform3D b = transposed( a );
 		a.concatenate( b );
 		double[][] matrix = new double[ 3 ][ 3 ];
@@ -146,6 +161,11 @@ public class ArtificialData
 			for ( int j = 0; j < 3; j++ )
 				matrix[ i ][ j ] = a.get( i, j );
 		return matrix;
+	}
+
+	private double randomDouble( double min, double max )
+	{
+		return random.nextDouble() * ( max - min ) + min;
 	}
 
 	private static AffineTransform3D transposed( AffineTransform3D transform )
