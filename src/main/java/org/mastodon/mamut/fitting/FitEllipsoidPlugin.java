@@ -40,11 +40,14 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.annotation.Nonnull;
+
 import org.apache.commons.lang3.time.StopWatch;
 import org.mastodon.app.ui.ViewMenuBuilder;
 import org.mastodon.collection.RefSet;
 import org.mastodon.mamut.MamutAppModel;
 import org.mastodon.mamut.fitting.edgel.Edgels;
+import org.mastodon.mamut.fitting.edgel.NoEllipsoidFoundException;
 import org.mastodon.mamut.fitting.edgel.SampleEllipsoidEdgel;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
 import org.mastodon.mamut.fitting.ui.EdgelsOverlay;
@@ -206,12 +209,10 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 		Parallelization.getTaskExecutor().forEach( threadSafeVertices, spot -> { // loop over vertices in parallel using multiple threads
 
-			final long t1 = System.currentTimeMillis();
-			final Ellipsoid ellipsoid = fitEllipsoid( spot, source, appModel );
-			final long runtime = System.currentTimeMillis() - t1;
-
-			if ( ellipsoid != null )
-			{
+			try {
+				final long t1 = System.currentTimeMillis();
+				final Ellipsoid ellipsoid = fitEllipsoid( spot, source, appModel );
+				final long runtime = System.currentTimeMillis() - t1;
 				writeLock.lock();
 				try
 				{
@@ -222,16 +223,24 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				{
 					writeLock.unlock();
 				}
-
 				found.getAndIncrement();
 				if ( DEBUG )
 					System.out.println( "Computed ellipsoid in " + runtime + "ms. Ellipsoid: " + ellipsoid );
 			}
-			else
+			catch ( NoEllipsoidFoundException e )
 			{
 				notFound.getAndIncrement();
 				if ( DEBUG )
-					System.out.println( "no ellipsoid found. spot: " + spot.getLabel() );
+				{
+					System.out.println( "No ellipsoid found. spot: " + spot.getLabel() );
+					System.out.println( "Reason: " + e.getMessage() );
+				}
+			}
+			catch ( Exception e )
+			{
+				notFound.getAndIncrement();
+				System.err.println( "Error while fitting ellipsoid for spot: " + spot.getLabel());
+				e.printStackTrace();
 			}
 
 			int outputRate = 1000;
@@ -265,6 +274,15 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		return list;
 	}
 
+	/**
+	 * Fit an ellipsoid to the given spot.
+	 *
+	 * @throws NoEllipsoidFoundException if the ellipsoid fitting algorithm simple does not
+	 *                yield a result.
+	 * @throws RuntimeException if there are other problems, e.g. the image source is not
+	 * 				  present or the image is not a {@link RealType}.
+	 */
+	@Nonnull
 	private Ellipsoid fitEllipsoid( Spot spot, SourceAndConverter< ? > source, MamutAppModel appModel )
 	{
 		// TODO: parameters -----------------
@@ -287,6 +305,9 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		AffineTransform3D sourceToGlobal = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
 		RandomAccessibleInterval< ? > frame = source.getSpimSource().getSource( timepoint, 0 );
+
+		if (frame == null)
+			throw new RuntimeException( "No image data for spot: " + spot.getLabel() + " timepoint: " + timepoint );
 
 		final RandomAccessibleInterval< ? > cropped =
 				cropSpot( sourceToGlobal, frame, spot );
@@ -359,7 +380,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		}
 		catch ( final IncompatibleTypeException e )
 		{
-			e.printStackTrace();
+			throw new RuntimeException( e );
 		}
 		return Views.translate( img, min );
 	}

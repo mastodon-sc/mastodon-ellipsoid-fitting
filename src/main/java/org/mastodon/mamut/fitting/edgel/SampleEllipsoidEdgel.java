@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import javax.annotation.Nonnull;
+
 import org.mastodon.mamut.fitting.ellipsoid.DistPointHyperEllipsoid;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
 import org.mastodon.mamut.fitting.ellipsoid.FitEllipsoid;
@@ -63,9 +65,12 @@ public class SampleEllipsoidEdgel
 	}
 
 	/**
-	 * Try to fit an ellipsoid to the given edgels. Returns null if there are not
-	 * enough edgels, or if the fit fails.
+	 * Try to fit an ellipsoid to the given edgels.
+	 *
+	 * @throws NoEllipsoidFoundException if no ellipsoid could be derived from the
+	 * 		   given edgels.
 	 */
+	@Nonnull
 	public static Ellipsoid sample(
 			final List< Edgel > edgels,
 			final double[] expectedCenter,
@@ -78,7 +83,7 @@ public class SampleEllipsoidEdgel
 	{
 		final int numPointsPerSample = 9;
 		if ( edgels.size() < numPointsPerSample )
-			return null;
+			throw new NoEllipsoidFoundException( "Not enough edgels to fit an ellipsoid." );
 
 		final Cost costFunction = new EdgelDistanceCost( outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance );
 
@@ -112,7 +117,7 @@ public class SampleEllipsoidEdgel
 		}
 
 		if ( bestEllipsoid == null ) // no ellipsoid found
-			return null;
+			throw new NoEllipsoidFoundException( "No ellipsoid found, that is near to the expected center." );
 
 		try
 		{
