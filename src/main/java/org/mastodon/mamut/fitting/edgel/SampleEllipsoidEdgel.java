@@ -43,6 +43,8 @@ import org.mastodon.mamut.fitting.ellipsoid.DistPointHyperEllipsoid.Result;
 import net.imglib2.algorithm.edge.Edgel;
 import net.imglib2.util.LinAlgHelpers;
 
+import gnu.trove.TIntArrayList;
+
 public class SampleEllipsoidEdgel
 {
 	public static Map< Edgel, Double > getCosts(
@@ -60,6 +62,10 @@ public class SampleEllipsoidEdgel
 		return costs;
 	}
 
+	/**
+	 * Try to fit an ellipsoid to the given edgels. Returns null if there are not
+	 * enough edgels, or if the fit fails.
+	 */
 	public static Ellipsoid sample(
 			final List< Edgel > edgels,
 			final double[] expectedCenter,
@@ -69,23 +75,14 @@ public class SampleEllipsoidEdgel
 			final double angleCutoffDistance,
 			final double maxCenterDistance )
 	{
-		if ( edgels.size() == 0 )
-		{
-			// System.out.println( "No edgels." );
-			return null;
-		}
 		final int numPointsPerSample = 9;
 		if ( edgels.size() < numPointsPerSample )
-		{
-			// System.out.println(
-			//		"Too few edgels. Required " + numPointsPerSample + " edgels, but got " + edgels.size() + "." );
 			return null;
-		}
 
 		final Cost costFunction = new EdgelDistanceCost( outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance );
 
 		final Random rand = new Random( System.currentTimeMillis() );
-		final ArrayList< Integer > indices = new ArrayList<>();
+		final TIntArrayList indices = new TIntArrayList();
 		final double[][] coordinates = new double[ numPointsPerSample ][ 3 ];
 
 		Ellipsoid bestEllipsoid = null;
@@ -94,60 +91,23 @@ public class SampleEllipsoidEdgel
 
 		for ( int sample = 0; sample < numSamples; ++sample )
 		{
-			try
-			{
-				indices.clear();
-				for ( int s = 0; s < numPointsPerSample; ++s )
-				{
-					int i = rand.nextInt( edgels.size() );
-					while ( indices.contains( i ) )
-						i = rand.nextInt( edgels.size() );
-					indices.add( i );
-					edgels.get( i ).localize( coordinates[ s ] );
-				}
-				final Ellipsoid ellipsoid = FitEllipsoid.yuryPetrov( coordinates );
+			sampleCoordinatesFromEdgels( edgels, coordinates, rand, indices );
 
-				// skip samples that cannot be fitted to an ellipsoid
-				if ( ellipsoid == null )
-				{
-					continue;
-				}
-				// skip degenerate samples
-				final double[] radii = ellipsoid.getRadii();
-				if ( Double.isNaN( radii[ 0 ] ) || Double.isNaN( radii[ 1 ] ) || Double.isNaN( radii[ 2 ] ) )
-				{
-					continue;
-				}
+			final Ellipsoid ellipsoid = tryFitEllipsoidYuryPetrov( coordinates );
 
-				ellipsoid.localize( center );
-				LinAlgHelpers.subtract( center, expectedCenter, center );
-				if ( LinAlgHelpers.length( center ) > maxCenterDistance )
-					continue;
+			if ( ! isEllipsoidValid( ellipsoid, expectedCenter, maxCenterDistance, center ) )
+				continue;
 
-				final double cost = costFunction.compute( ellipsoid, edgels );
-				if ( cost < bestCost )
-				{
-					bestCost = cost;
-					bestEllipsoid = ellipsoid;
-				}
-			}
-			catch ( final IllegalArgumentException e )
+			final double cost = costFunction.compute( ellipsoid, edgels );
+			if ( cost < bestCost )
 			{
-				// e.printStackTrace();
-				// System.out.println( "oops" );
-			}
-			catch ( final RuntimeException e )
-			{
-				// e.printStackTrace();
-				// System.out.println( "spd" );
+				bestCost = cost;
+				bestEllipsoid = ellipsoid;
 			}
 		}
 
-		if ( bestEllipsoid == null )
-		{
-			// System.out.println( "no best ellipsoid. potential reason: center of best ellipsoid too far from expected center." );
+		if ( bestEllipsoid == null ) // no ellipsoid found
 			return null;
-		}
 
 		try
 		{
@@ -155,10 +115,50 @@ public class SampleEllipsoidEdgel
 			return fitToInliers( bestEllipsoid, edgels, outsideCutoffDistance, insideCutoffDistance,
 					angleCutoffDistance );
 		}
-		catch ( final IllegalArgumentException e )
+		catch ( final RuntimeException e )
 		{
+			// refinement failed
 			return bestEllipsoid;
 		}
+	}
+
+	private static void sampleCoordinatesFromEdgels( List< Edgel > edgels, double[][] coordinates, Random rand, TIntArrayList indices )
+	{
+		indices.clear();
+		for ( int s = 0; s < coordinates.length; ++s )
+		{
+			int i = rand.nextInt( edgels.size() );
+			while ( indices.contains( i ) )
+				i = rand.nextInt( edgels.size() );
+			indices.add( i );
+			edgels.get( i ).localize( coordinates[ s ] );
+		}
+	}
+
+	private static Ellipsoid tryFitEllipsoidYuryPetrov( double[][] coordinates )
+	{
+		try
+		{
+			return FitEllipsoid.yuryPetrov( coordinates );
+		}
+		catch ( final RuntimeException e )
+		{
+			return null;
+		}
+	}
+
+	private static boolean isEllipsoidValid( Ellipsoid ellipsoid, double[] expectedCenter, double maxCenterDistance, double[] center )
+	{
+		if ( ellipsoid == null )
+			return false;
+
+		// skip degenerate samples
+		final double[] radii = ellipsoid.getRadii();
+		if ( Double.isNaN( radii[ 0 ] ) || Double.isNaN( radii[ 1 ] ) || Double.isNaN( radii[ 2 ] ) )
+			return false;
+
+		ellipsoid.localize( center );
+		return LinAlgHelpers.distance( expectedCenter, center ) <= maxCenterDistance;
 	}
 
 	public static Ellipsoid fitToInliers(
