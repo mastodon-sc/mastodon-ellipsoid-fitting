@@ -70,6 +70,7 @@ public class SampleEllipsoidEdgel
 			final List< Edgel > edgels,
 			final double[] expectedCenter,
 			final int numSamples,
+			final int numCandidates,
 			final double outsideCutoffDistance,
 			final double insideCutoffDistance,
 			final double angleCutoffDistance,
@@ -88,6 +89,7 @@ public class SampleEllipsoidEdgel
 		Ellipsoid bestEllipsoid = null;
 		double bestCost = Double.POSITIVE_INFINITY;
 		final double[] center = new double[ 3 ];
+		int candidates = 0;
 
 		for ( int sample = 0; sample < numSamples; ++sample )
 		{
@@ -104,6 +106,9 @@ public class SampleEllipsoidEdgel
 				bestCost = cost;
 				bestEllipsoid = ellipsoid;
 			}
+
+			if( ++candidates >= numCandidates )
+				break;
 		}
 
 		if ( bestEllipsoid == null ) // no ellipsoid found
