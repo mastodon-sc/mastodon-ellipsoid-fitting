@@ -182,13 +182,13 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 			final SourceAndConverter< ? > source = appModel.getSharedBdvData().getSources().get( sourceIndex );
 			if ( !( source.getSpimSource().getType() instanceof RealType ) )
 				throw new IllegalArgumentException( "Expected RealType image source" );
-			process( source );
+			process( Cast.unchecked( source ) );
 		}
 	}
 
 	private static final boolean DEBUG = false;
 
-	private void process( final SourceAndConverter< ? > source )
+	private <T extends RealType<T> > void process( final SourceAndConverter< T > source )
 	{
 		final MamutAppModel appModel = pluginAppModel.getAppModel();
 
@@ -283,7 +283,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	 * 				  present or the image is not a {@link RealType}.
 	 */
 	@Nonnull
-	private Ellipsoid fitEllipsoid( Spot spot, SourceAndConverter< ? > source, MamutAppModel appModel )
+	private < T extends RealType< T > > Ellipsoid fitEllipsoid( Spot spot, SourceAndConverter< T > source, MamutAppModel appModel )
 	{
 		// TODO: parameters -----------------
 		final double smoothSigma = 2;
