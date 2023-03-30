@@ -163,7 +163,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	private void fitSelectedVertices()
+	void fitSelectedVertices()
 	{
 		// TODO: parameters to select which source to act on
 		final int sourceIndex = 0;
