@@ -102,18 +102,18 @@ public class SampleEllipsoidEdgel
 
 			final Ellipsoid ellipsoid = tryFitEllipsoidYuryPetrov( coordinates );
 
-			if ( ! isEllipsoidValid( ellipsoid, expectedCenter, maxCenterDistance, center ) )
-				continue;
-
-			final double cost = costFunction.compute( ellipsoid, edgels );
-			if ( cost < bestCost )
+			if ( isEllipsoidValid( ellipsoid, expectedCenter, maxCenterDistance, center ) )
 			{
-				bestCost = cost;
-				bestEllipsoid = ellipsoid;
-			}
+				final double cost = costFunction.compute( ellipsoid, edgels );
+				if ( cost < bestCost )
+				{
+					bestCost = cost;
+					bestEllipsoid = ellipsoid;
+				}
 
-			if( ++candidates >= numCandidates )
-				break;
+				if ( ++candidates >= numCandidates )
+					break;
+			}
 		}
 
 		if ( bestEllipsoid == null ) // no ellipsoid found
@@ -122,8 +122,7 @@ public class SampleEllipsoidEdgel
 		try
 		{
 			// refined ellipsoid
-			return fitToInliers( bestEllipsoid, edgels, outsideCutoffDistance, insideCutoffDistance,
-					angleCutoffDistance );
+			return fitToInliers( edgels, bestEllipsoid, costFunction );
 		}
 		catch ( final RuntimeException e )
 		{
@@ -171,15 +170,24 @@ public class SampleEllipsoidEdgel
 		return LinAlgHelpers.distance( expectedCenter, center ) <= maxCenterDistance;
 	}
 
+	/**
+	 * Fits an ellipsoid to all the edgels that are considered to be inliers of
+	 * the given "{@code guess}" ellipsoid.
+	 *
+	 * @param edgels       The edgels that are used to fit the ellipsoid.
+	 * @param guess        The ellipsoid that is used to determine the inliers.
+	 * @param costFunction The cost function that decides whether an edgel is an
+	 *                     inlier or not.
+	 * @return the fitted ellipsoid.
+	 *
+	 * @throws RuntimeException if the fitting fails.
+	 */
 	public static Ellipsoid fitToInliers(
-			final Ellipsoid guess,
 			final List< Edgel > edgels,
-			final double outsideCutoffDistance,
-			final double insideCutoffDistance,
-			final double angleCutoffDistance ) throws IllegalArgumentException
+			final Ellipsoid guess,
+			final Cost costFunction )
 	{
 		final ArrayList< Edgel > inliers = new ArrayList<>();
-		final Cost costFunction = new EdgelDistanceCost( outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance );
 		for ( final Edgel edgel : edgels )
 			if ( costFunction.isInlier( guess, edgel ) )
 				inliers.add( edgel );
