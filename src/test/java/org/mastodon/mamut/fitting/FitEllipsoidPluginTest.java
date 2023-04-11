@@ -47,9 +47,9 @@ import static org.junit.Assert.assertEquals;
 public class FitEllipsoidPluginTest
 {
 
-	private static final double ACCEPTED_RELATIVE_AXES_DIFFERENCE = 0.3;
+	private static final double ACCEPTED_RELATIVE_AXES_DIFFERENCE = 0.2;
 
-	private static final int ACCEPTED_CENTER_DISTANCE = 20;
+	private static final int ACCEPTED_CENTER_DISTANCE = 2;
 
 	@Test
 	public void testFitEllipsoidPlugin() {
