@@ -211,7 +211,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 			try {
 				final long t1 = System.currentTimeMillis();
-				final Ellipsoid ellipsoid = fitEllipsoid( spot, source, appModel );
+				final Ellipsoid ellipsoid = fitEllipsoid( spot, source );
 				final long runtime = System.currentTimeMillis() - t1;
 				writeLock.lock();
 				try
@@ -283,7 +283,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	 * 				  present or the image is not a {@link RealType}.
 	 */
 	@Nonnull
-	private < T extends RealType< T > > Ellipsoid fitEllipsoid( Spot spot, SourceAndConverter< T > source, MamutAppModel appModel )
+	private < T extends RealType< T > > Ellipsoid fitEllipsoid( Spot spot, SourceAndConverter< T > source )
 	{
 		// TODO: parameters -----------------
 		final double smoothSigma = 2;
@@ -333,7 +333,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				maxCenterDistance );
 
 		if ( DEBUG )
-			showBdvDebugWindow( source, appModel, outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance, sourceToGlobal, input, filteredEdgels, ellipsoid );
+			showBdvDebugWindow( source, outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance, sourceToGlobal, input, filteredEdgels, ellipsoid );
 		return ellipsoid;
 	}
 
@@ -404,11 +404,12 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		return scale;
 	}
 
-	private void showBdvDebugWindow( SourceAndConverter< ? > source, MamutAppModel appModel, double outsideCutoffDistance, double insideCutoffDistance, double angleCutoffDistance,
+	private void showBdvDebugWindow( SourceAndConverter< ? > source, double outsideCutoffDistance, double insideCutoffDistance, double angleCutoffDistance,
 			AffineTransform3D sourceToGlobal, RandomAccessibleInterval< FloatType > input, ArrayList< Edgel > filteredEdgels, Ellipsoid ellipsoid )
 	{
 		final BdvStackSource< FloatType > inputSource =
 				BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
+		final MamutAppModel appModel = pluginAppModel.getAppModel();
 		final ConverterSetups setups = appModel.getSharedBdvData().getConverterSetups();
 		final ConverterSetup cs = setups.getConverterSetup( source );
 		final Bounds bounds = setups.getBounds().getBounds( cs );
