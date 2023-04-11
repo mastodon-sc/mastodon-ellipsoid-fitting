@@ -275,7 +275,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	}
 
 	/**
-	 * Fit an ellipsoid to the given spot.
+	 * Fit an ellipsoid for the given spot.
 	 *
 	 * @throws NoEllipsoidFoundException if the ellipsoid fitting algorithm simple does not
 	 *                yield a result.
@@ -304,16 +304,14 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		final int timepoint = spot.getTimepoint();
 		AffineTransform3D sourceToGlobal = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
-		RandomAccessibleInterval< ? > frame = source.getSpimSource().getSource( timepoint, 0 );
+		RandomAccessibleInterval< T > frame = source.getSpimSource().getSource( timepoint, 0 );
 
 		if (frame == null)
 			throw new RuntimeException( "No image data for spot: " + spot.getLabel() + " timepoint: " + timepoint );
 
-		final RandomAccessibleInterval< ? > cropped =
-				cropSpot( sourceToGlobal, frame, spot );
+		final RandomAccessibleInterval< T > cropped = cropSpot( sourceToGlobal, frame, spot );
 
-		final RandomAccessibleInterval< FloatType > converted =
-				RealTypeConverters.convert( Cast.unchecked( cropped ), new FloatType() );
+		final RandomAccessibleInterval< FloatType > converted = RealTypeConverters.convert( cropped, new FloatType() );
 
 		final RandomAccessibleInterval< FloatType > input = gaussianBlur( smoothSigma, extractScale( sourceToGlobal ), converted );
 
@@ -339,7 +337,8 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		return ellipsoid;
 	}
 
-	private static RandomAccessibleInterval< ? > cropSpot( AffineTransform3D sourceToGlobal, RandomAccessibleInterval< ? > frame, Spot spot )
+	private static <T extends RealType< T > > RandomAccessibleInterval< T > cropSpot( AffineTransform3D sourceToGlobal,
+			RandomAccessibleInterval< T > frame, Spot spot )
 	{
 		final double[] centerInGlobalCoordinates = spot.positionAsDoubleArray();
 		final double radius = Math.sqrt( spot.getBoundingSphereRadiusSquared() );
