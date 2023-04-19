@@ -121,8 +121,12 @@ public class SampleEllipsoidEdgel
 
 		try
 		{
-			// refined ellipsoid
-			return fitToInliers( edgels, bestEllipsoid, costFunction );
+			// refine ellipsoid
+			Ellipsoid refinedEllipsoid = fitToInliers( edgels, bestEllipsoid, costFunction );
+			if ( isEllipsoidValid( refinedEllipsoid, expectedCenter, maxCenterDistance, center ) )
+				return refinedEllipsoid;
+			else
+				return bestEllipsoid; // return best ellipsoid without refinement, if refined ellipsoid is not valid
 		}
 		catch ( final RuntimeException e )
 		{
