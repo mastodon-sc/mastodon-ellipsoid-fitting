@@ -165,9 +165,7 @@ public class SampleEllipsoidEdgel
 		if ( ellipsoid == null )
 			return false;
 
-		// skip degenerate samples
-		final double[] radii = ellipsoid.getRadii();
-		if ( Double.isNaN( radii[ 0 ] ) || Double.isNaN( radii[ 1 ] ) || Double.isNaN( radii[ 2 ] ) )
+		if ( ! ellipsoid.isLegitimate() )
 			return false;
 
 		ellipsoid.localize( center );
