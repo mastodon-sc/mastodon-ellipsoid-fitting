@@ -111,7 +111,8 @@ public class SampleEllipsoidEdgel
 					bestEllipsoid = ellipsoid;
 				}
 
-				if ( ++candidates >= numCandidates )
+				candidates++;
+				if ( candidates >= numCandidates )
 					break;
 			}
 		}
