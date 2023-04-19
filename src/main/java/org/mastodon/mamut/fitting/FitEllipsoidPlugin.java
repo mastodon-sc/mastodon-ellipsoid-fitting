@@ -186,7 +186,11 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		}
 	}
 
+	private static final boolean TRACE = false;
+
 	private static final boolean DEBUG = false;
+
+	private static final boolean DEBUG_UI = false;
 
 	private <T extends RealType<T> > void process( final SourceAndConverter< T > source )
 	{
@@ -224,7 +228,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 					writeLock.unlock();
 				}
 				found.getAndIncrement();
-				if ( DEBUG )
+				if ( TRACE )
 					System.out.println( "Computed ellipsoid in " + runtime + "ms. Ellipsoid: " + ellipsoid );
 			}
 			catch ( NoEllipsoidFoundException e )
@@ -332,7 +336,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				angleCutoffDistance,
 				maxCenterDistance );
 
-		if ( DEBUG )
+		if ( DEBUG_UI )
 			showBdvDebugWindow( source, outsideCutoffDistance, insideCutoffDistance, angleCutoffDistance, sourceToGlobal, input, filteredEdgels, ellipsoid );
 		return ellipsoid;
 	}
