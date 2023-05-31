@@ -81,6 +81,13 @@
 			<artifactId>scifio</artifactId>
 		</dependency>
 
+		<!-- Other dependencies -->
+
+		<dependency>
+			<groupId>net.sf.trove4j</groupId>
+			<artifactId>trove4j</artifactId>
+		</dependency>
+
 		<!-- Test dependencies -->
 		
 		<dependency>

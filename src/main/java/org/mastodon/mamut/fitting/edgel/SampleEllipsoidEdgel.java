@@ -45,7 +45,7 @@ import org.mastodon.mamut.fitting.ellipsoid.DistPointHyperEllipsoid.Result;
 import net.imglib2.algorithm.edge.Edgel;
 import net.imglib2.util.LinAlgHelpers;
 
-import gnu.trove.TIntArrayList;
+import gnu.trove.list.array.TIntArrayList;
 
 public class SampleEllipsoidEdgel
 {
