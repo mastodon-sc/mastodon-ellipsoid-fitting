@@ -264,6 +264,10 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				+ "%), total time: " + watch.formatTime()
 				+ ", time per spot: " + ( int ) ( ( double ) watch.getTime() / ( found.get() + notFound.get() ) )
 				+ "ms." );
+
+		// set undo point if at least one spot was fitted
+		if ( found.get() > 0 )
+			appModel.getModel().setUndoPoint();
 	}
 
 	private static ArrayList< Spot > asArrayList( RefSet< Spot > vertices )
