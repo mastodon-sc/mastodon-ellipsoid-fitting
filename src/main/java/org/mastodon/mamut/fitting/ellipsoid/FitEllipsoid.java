@@ -52,6 +52,11 @@ public class FitEllipsoid
 	 *            the 2D array of the points to fit.
 	 * @return a new {@link Ellipsoid} object.
 	 *
+	 * @throws IllegalArgumentException if there are less than 9 points.
+	 *
+	 * @throws RuntimeException it the given points don't form a unique ellipsoid.
+	 *            This happens for example if the points are all on one plane.
+	 *
 	 * @see <a href=
 	 *      "http://www.mathworks.com/matlabcentral/fileexchange/24693-ellipsoid-fit"
 	 *      >MATLAB script</a>

@@ -132,6 +132,20 @@ public class HyperEllipsoid extends AbstractRealLocalizable
 	}
 
 	/**
+	 * @return true, if all the radii are positive.
+	 * <p>
+	 * If at least one radius equals zero or NaN, it means that the covariance
+	 * matrix is not positive definite. This indicates that the corresponding
+	 * ellipsoid is illegitimate or degenerate.
+	 */
+	public boolean isLegitimate() {
+		boolean b = true;
+		for ( double radius : getRadii() )
+			b = b && radius > 0;
+		return b;
+	}
+
+	/**
 	 * Get the covariance matrix.
 	 *
 	 * @return covariance matrix.
