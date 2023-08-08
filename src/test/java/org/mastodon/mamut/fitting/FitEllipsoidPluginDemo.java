@@ -28,14 +28,6 @@
  */
 package org.mastodon.mamut.fitting;
 
-import java.util.HashMap;
-
-import javax.annotation.Nonnull;
-
-import net.imglib2.type.numeric.RealType;
-
-import org.mastodon.mamut.MamutAppModel;
-import org.mastodon.mamut.MamutViewBdv;
 import org.mastodon.mamut.plugin.MamutPluginAppModel;
 
 /**
@@ -51,12 +43,7 @@ public class FitEllipsoidPluginDemo
 		FitEllipsoidPlugin plugin = new FitEllipsoidPlugin();
 		plugin.setAppPluginModel( new MamutPluginAppModel( data.getAppModel(), null ) );
 		plugin.fitSelectedVertices();
-		showBdvWindow( data.getAppModel() );
+		DemoUtils.showBdvWindow( data.getAppModel() );
 	}
 
-	private static < T extends RealType< T > > void showBdvWindow( @Nonnull MamutAppModel appModel )
-	{
-		MamutViewBdv ts = new MamutViewBdv( appModel, new HashMap<>() );
-		ts.getFrame().setVisible( true );
-	}
 }

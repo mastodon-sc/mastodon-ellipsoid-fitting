@@ -28,16 +28,11 @@
  */
 package org.mastodon.mamut.fitting;
 
-import java.util.Objects;
 import java.util.Random;
 
-import net.imagej.ImgPlus;
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
 import net.imglib2.Interval;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
-import net.imglib2.img.display.imagej.ImgToVirtualStack;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
@@ -51,19 +46,6 @@ import org.mastodon.mamut.MamutAppModel;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
 import org.mastodon.mamut.model.Model;
 import org.mastodon.mamut.model.Spot;
-import org.mastodon.mamut.plugin.MamutPlugins;
-import org.mastodon.ui.coloring.feature.FeatureColorModeManager;
-import org.mastodon.ui.keymap.Keymap;
-import org.mastodon.ui.keymap.KeymapManager;
-import org.mastodon.views.bdv.SharedBigDataViewerData;
-import org.mastodon.views.bdv.overlay.ui.RenderSettingsManager;
-import org.mastodon.views.grapher.display.style.DataDisplayStyleManager;
-import org.mastodon.views.trackscheme.display.style.TrackSchemeStyleManager;
-import org.scijava.ui.behaviour.KeyPressedManager;
-import org.scijava.ui.behaviour.util.Actions;
-
-import bdv.viewer.ViewerOptions;
-import ij.ImagePlus;
 
 /**
  * Renders a grid of ellipsoids in 3D, and wraps the result in a {@link MamutAppModel}.
@@ -102,7 +84,7 @@ public class ArtificialData
 					drawSpot( image, interval, ellipsoid );
 				}
 
-		appModel = wrapAsAppModel( image, model );
+		appModel = DemoUtils.wrapAsAppModel( image, model );
 		selectAllVerticies();
 	}
 
@@ -112,12 +94,6 @@ public class ArtificialData
 		MultiVariantNormalDistributionRenderer.renderMultivariateNormalDistribution(
 				ellipsoid.getCenter(), ellipsoid.getCovariance(),
 				crop );
-	}
-
-	private static SharedBigDataViewerData asSharedBdvDataXyz( Img< FloatType > image1 )
-	{
-		ImagePlus image = ImgToVirtualStack.wrap( new ImgPlus<>( image1, "image", new AxisType[] { Axes.X, Axes.Y, Axes.Z } ) );
-		return Objects.requireNonNull( SharedBigDataViewerData.fromImagePlus( image, new ViewerOptions(), () -> {} ) );
 	}
 
 	private void selectAllVerticies()
@@ -175,15 +151,6 @@ public class ArtificialData
 			for ( int j = 0; j < 3; j++ )
 				r.set( transform.get( i, j ), j, i );
 		return r;
-	}
-
-	private static MamutAppModel wrapAsAppModel( Img< FloatType > image, Model model )
-	{
-		SharedBigDataViewerData sharedBigDataViewerData = asSharedBdvDataXyz( image );
-		Keymap keymap = new Keymap();
-		return new MamutAppModel( model, sharedBigDataViewerData, new KeyPressedManager(), new TrackSchemeStyleManager(),
-				new DataDisplayStyleManager(), new RenderSettingsManager(), new FeatureColorModeManager(), new KeymapManager(),
-				new MamutPlugins( keymap ), new Actions( keymap.getConfig() ) );
 	}
 
 	public MamutAppModel getAppModel()
