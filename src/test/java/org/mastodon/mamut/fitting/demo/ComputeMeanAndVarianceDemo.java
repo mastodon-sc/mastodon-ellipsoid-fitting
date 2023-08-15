@@ -1,4 +1,4 @@
-package org.mastodon.mamut.fitting;
+package org.mastodon.mamut.fitting.demo;
 
 import net.imglib2.Cursor;
 import net.imglib2.img.Img;
