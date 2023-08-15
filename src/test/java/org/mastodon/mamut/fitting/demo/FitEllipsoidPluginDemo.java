@@ -26,8 +26,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting;
+package org.mastodon.mamut.fitting.demo;
 
+import org.mastodon.mamut.fitting.FitEllipsoidPlugin;
 import org.mastodon.mamut.fitting.util.ArtificialData;
 import org.mastodon.mamut.fitting.util.DemoUtils;
 import org.scijava.Context;
