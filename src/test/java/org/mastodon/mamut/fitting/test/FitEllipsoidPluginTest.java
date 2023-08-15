@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting;
+package org.mastodon.mamut.fitting.test;
 
 import static org.junit.Assert.assertEquals;
 
@@ -34,6 +34,7 @@ import java.util.Arrays;
 
 import org.junit.Test;
 import org.mastodon.collection.RefObjectMap;
+import org.mastodon.mamut.fitting.FitEllipsoidPlugin;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
 import org.mastodon.mamut.fitting.util.ArtificialData;
 import org.mastodon.mamut.model.ModelGraph;
