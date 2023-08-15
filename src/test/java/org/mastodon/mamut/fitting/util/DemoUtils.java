@@ -1,4 +1,4 @@
-package org.mastodon.mamut.fitting;
+package org.mastodon.mamut.fitting.util;
 
 import java.util.HashMap;
 import java.util.Objects;
@@ -29,7 +29,7 @@ import org.scijava.ui.behaviour.util.Actions;
 import bdv.viewer.ViewerOptions;
 import ij.ImagePlus;
 
-class DemoUtils
+public class DemoUtils
 {
 
 	private DemoUtils()
