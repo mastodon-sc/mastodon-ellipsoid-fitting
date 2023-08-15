@@ -20,6 +20,8 @@ import org.mastodon.mamut.model.Model;
  */
 public class ComputeMeanAndVarianceDemo
 {
+	private static final int PIXEL_VALUE = 42;
+
 	public static void main( String[] args )
 	{
 		Img< FloatType > image = generateExampleImage();
@@ -47,7 +49,7 @@ public class ComputeMeanAndVarianceDemo
 		MultiVariantNormalDistributionRenderer.renderMultivariateNormalDistribution( center, cov, image );
 		LoopBuilder.setImages( image ).forEachPixel( pixel -> {
 			if ( pixel.get() > 500 )
-				pixel.set( 42 );
+				pixel.set( PIXEL_VALUE );
 			else
 				pixel.set( 0 );
 		} );
@@ -64,7 +66,7 @@ public class ComputeMeanAndVarianceDemo
 		double[] position = new double[ 3 ];
 		long counter = 0;
 		while ( cursor.hasNext() )
-			if ( cursor.next().get() == 42 )
+			if ( cursor.next().get() == PIXEL_VALUE )
 			{
 				cursor.localize( position );
 				LinAlgHelpers.add( sum, position, sum );
@@ -85,7 +87,7 @@ public class ComputeMeanAndVarianceDemo
 		double[][] covariance = new double[ 3 ][ 3 ];
 		cursor.reset();
 		while ( cursor.hasNext() )
-			if ( cursor.next().get() == 42 )
+			if ( cursor.next().get() == PIXEL_VALUE )
 			{
 				cursor.localize( position );
 				LinAlgHelpers.subtract( position, mean, position );
