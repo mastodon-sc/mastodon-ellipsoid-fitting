@@ -28,13 +28,8 @@
  */
 package org.mastodon.mamut.fitting;
 
-import javax.annotation.Nonnull;
-
-import org.mastodon.mamut.ProjectModel;
-import org.mastodon.mamut.views.bdv.MamutViewBdv;
 import org.scijava.Context;
 
-import net.imglib2.type.numeric.RealType;
 
 /**
  * Runs the {@link FitEllipsoidPlugin} on synthetic data
@@ -49,11 +44,6 @@ public class FitEllipsoidPluginDemo
 		final FitEllipsoidPlugin plugin = new FitEllipsoidPlugin();
 		plugin.setAppPluginModel( data.getAppModel() );
 		plugin.fitSelectedVertices();
-		showBdvWindow( data.getAppModel() );
-	}
-
-	private static < T extends RealType< T > > void showBdvWindow( @Nonnull final ProjectModel appModel )
-	{
-		appModel.getWindowManager().createView( MamutViewBdv.class );
+		DemoUtils.showBdvWindow( data.getAppModel() );
 	}
 }
