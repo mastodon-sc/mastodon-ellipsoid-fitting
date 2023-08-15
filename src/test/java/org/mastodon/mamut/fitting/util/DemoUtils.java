@@ -1,4 +1,4 @@
-package org.mastodon.mamut.fitting;
+package org.mastodon.mamut.fitting.util;
 
 import ij.ImagePlus;
 import net.imagej.ImgPlus;
