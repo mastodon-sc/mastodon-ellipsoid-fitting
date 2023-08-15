@@ -26,13 +26,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting;
+package org.mastodon.mamut.fitting.test;
 
 import net.imglib2.util.LinAlgHelpers;
 import net.imglib2.util.StopWatch;
 
 import org.junit.Test;
 import org.mastodon.collection.RefObjectMap;
+import org.mastodon.mamut.fitting.FitEllipsoidPlugin;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
 import org.mastodon.mamut.fitting.util.ArtificialData;
 import org.mastodon.mamut.model.Spot;
