@@ -171,7 +171,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		fitSelectedVerticesAction.setEnabled( appModel != null );
 	}
 
-	void fitSelectedVertices()
+	public void fitSelectedVertices()
 	{
 		// TODO: parameters to select which source to act on
 		final int sourceIndex = 0;
