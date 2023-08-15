@@ -11,6 +11,8 @@ import org.mastodon.mamut.fitting.util.DemoUtils;
 import org.mastodon.mamut.fitting.util.MultiVariantNormalDistributionRenderer;
 import org.mastodon.mamut.model.Model;
 
+import java.util.Arrays;
+
 /**
  * Computing the mean position and covariance matrix for a given segmented
  * region of an image is an easy way to get good ellipsoid parameters for
@@ -24,12 +26,24 @@ public class ComputeMeanAndVarianceDemo
 
 	public static void main( String[] args )
 	{
-		Img< FloatType > image = generateExampleImage();
+		double[] center = { 40, 50, 60 };
+		double[][] givenCovariance = {
+				{ 400, 20, -10 },
+				{ 20, 200, 30 },
+				{ -10, 30, 100 }
+		};
+
+		Img< FloatType > image = generateExampleImage( center, givenCovariance );
 		double[] mean = computeMean( image );
-		double[][] covariance = computeCovariance( image, mean );
+		double[][] computedCovariance = computeCovariance( image, mean );
+
+		System.out.println( "Given center: " + Arrays.toString( center ) );
+		System.out.println( "Computed mean: " + Arrays.toString( mean ) );
+		System.out.println( "Given covariance: " + Arrays.deepToString( givenCovariance ) );
+		System.out.println( "Computed covariance: " + Arrays.deepToString( computedCovariance ) );
 
 		Model model = new Model();
-		model.getGraph().addVertex().init( 0, mean, covariance );
+		model.getGraph().addVertex().init( 0, mean, computedCovariance );
 		DemoUtils.showBdvWindow( DemoUtils.wrapAsAppModel( image, model ) );
 	}
 
@@ -37,15 +51,9 @@ public class ComputeMeanAndVarianceDemo
 	 * Returns an example image with a single ellipsoid. Pixel values are 0 or 42.
 	 * 0 is background, 42 is the ellipsoid.
 	 */
-	private static Img< FloatType > generateExampleImage()
+	private static Img< FloatType > generateExampleImage( double[] center, double[][] cov )
 	{
 		Img< FloatType > image = ArrayImgs.floats( 100, 100, 100 );
-		double[] center = { 40, 50, 60 };
-		double[][] cov = {
-				{ 400, 20, -10 },
-				{ 20, 200, 30 },
-				{ -10, 30, 100 }
-		};
 		MultiVariantNormalDistributionRenderer.renderMultivariateNormalDistribution( center, cov, image );
 		LoopBuilder.setImages( image ).forEachPixel( pixel -> {
 			if ( pixel.get() > 500 )
