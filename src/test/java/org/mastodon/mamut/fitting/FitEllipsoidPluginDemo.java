@@ -28,6 +28,8 @@
  */
 package org.mastodon.mamut.fitting;
 
+import org.mastodon.mamut.fitting.util.ArtificialData;
+import org.mastodon.mamut.fitting.util.DemoUtils;
 import org.mastodon.mamut.plugin.MamutPluginAppModel;
 
 /**

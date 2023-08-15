@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting;
+package org.mastodon.mamut.fitting.util;
 
 import java.util.Random;
 

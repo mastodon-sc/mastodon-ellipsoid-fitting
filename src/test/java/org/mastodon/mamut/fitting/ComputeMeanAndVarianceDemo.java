@@ -7,6 +7,8 @@ import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.LinAlgHelpers;
 
+import org.mastodon.mamut.fitting.util.DemoUtils;
+import org.mastodon.mamut.fitting.util.MultiVariantNormalDistributionRenderer;
 import org.mastodon.mamut.model.Model;
 
 /**
