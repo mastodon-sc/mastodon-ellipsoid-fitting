@@ -88,6 +88,14 @@
 			<artifactId>trove4j</artifactId>
 		</dependency>
 
+		<!-- Java Deep Learning (JDLL) dependencies -->
+		<dependency>
+			<groupId>io.bioimage</groupId>
+			<artifactId>dl-modelrunner</artifactId>
+			<version>0.3.12-SNAPSHOT</version>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- Test dependencies -->
 		
 		<dependency>
