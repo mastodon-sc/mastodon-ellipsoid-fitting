@@ -88,7 +88,7 @@ public class StarDist
 			}
 		}
 		System.out.println( "Found " + starConvexShapes.size() + " candidate for star convex shapes (including non-maximum shapes)." );
-
+		// TODO: add non-maximum suppression (NMS) here
 	}
 
 	// linear spacing between -1 and 1 (equivalent to np.linspace(-1,1,n_rays))
