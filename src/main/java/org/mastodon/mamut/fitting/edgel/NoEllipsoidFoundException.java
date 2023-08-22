@@ -30,6 +30,8 @@ package org.mastodon.mamut.fitting.edgel;
 
 public class NoEllipsoidFoundException extends RuntimeException
 {
+	private static final long serialVersionUID = 1L;
+
 	public NoEllipsoidFoundException( final String message )
 	{
 		super( message );
