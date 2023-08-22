@@ -28,18 +28,18 @@
  */
 package org.mastodon.mamut.fitting;
 
-import net.imglib2.util.LinAlgHelpers;
-import net.imglib2.util.StopWatch;
+import static org.junit.Assert.assertEquals;
+
+import java.util.Arrays;
 
 import org.junit.Test;
 import org.mastodon.collection.RefObjectMap;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
 import org.mastodon.mamut.model.Spot;
-import org.mastodon.mamut.plugin.MamutPluginAppModel;
+import org.scijava.Context;
 
-import java.util.Arrays;
-
-import static org.junit.Assert.assertEquals;
+import net.imglib2.util.LinAlgHelpers;
+import net.imglib2.util.StopWatch;
 
 /**
  * Tests the {@link FitEllipsoidPlugin}.
@@ -53,49 +53,49 @@ public class FitEllipsoidPluginTest
 
 	@Test
 	public void testFitEllipsoidPlugin() {
-		ArtificialData data = new ArtificialData();
-		StopWatch watch = StopWatch.createAndStart();
-		FitEllipsoidPlugin plugin = new FitEllipsoidPlugin();
-		plugin.setAppPluginModel( new MamutPluginAppModel( data.getAppModel(), null ) );
+		final ArtificialData data = new ArtificialData( new Context() );
+		final StopWatch watch = StopWatch.createAndStart();
+		final FitEllipsoidPlugin plugin = new FitEllipsoidPlugin();
+		plugin.setAppPluginModel( data.getAppModel() );
 		plugin.fitSelectedVertices();
 		System.out.println( watch );
-		int success = countCorrectEllipsoids( data );
+		final int success = countCorrectEllipsoids( data );
 		assertEquals( "Not all ellipsoids were fitted correctly.", data.getAppModel().getModel().getGraph().vertices().size(), success );
 	}
 
-	private static int countCorrectEllipsoids( ArtificialData data )
+	private static int countCorrectEllipsoids( final ArtificialData data )
 	{
 		int success = 0;
-		RefObjectMap< Spot, Ellipsoid > expectedEllipsoids = data.getExpectedEllipsoids();
-		for( Spot spot : data.getAppModel().getModel().getGraph().vertices() ) {
-			Ellipsoid actualEllipsoid = asEllipsoid( spot );
-			Ellipsoid expectedEllipsoid = expectedEllipsoids.get( spot );
-			boolean equal = isEllipsoidEqual( expectedEllipsoid, actualEllipsoid );
+		final RefObjectMap< Spot, Ellipsoid > expectedEllipsoids = data.getExpectedEllipsoids();
+		for( final Spot spot : data.getAppModel().getModel().getGraph().vertices() ) {
+			final Ellipsoid actualEllipsoid = asEllipsoid( spot );
+			final Ellipsoid expectedEllipsoid = expectedEllipsoids.get( spot );
+			final boolean equal = isEllipsoidEqual( expectedEllipsoid, actualEllipsoid );
 			if( equal )
 				success++;
 		}
 		return success;
 	}
 
-	private static Ellipsoid asEllipsoid( Spot spot )
+	private static Ellipsoid asEllipsoid( final Spot spot )
 	{
-		double[][] covariance = new double[3][3];
+		final double[][] covariance = new double[3][3];
 		spot.getCovariance( covariance );
-		double[] center = spot.positionAsDoubleArray();
+		final double[] center = spot.positionAsDoubleArray();
 		return new Ellipsoid( center, covariance, null, null, null );
 	}
 
-	private static boolean isEllipsoidEqual( Ellipsoid expectedEllipsoid, Ellipsoid fittedEllipsoid )
+	private static boolean isEllipsoidEqual( final Ellipsoid expectedEllipsoid, final Ellipsoid fittedEllipsoid )
 	{
-		double centerDistance = LinAlgHelpers.distance( expectedEllipsoid.getCenter(), fittedEllipsoid.getCenter() );
-		double[] expectedAxis = expectedEllipsoid.getRadii().clone();
-		double[] fittedAxis = fittedEllipsoid.getRadii().clone();
+		final double centerDistance = LinAlgHelpers.distance( expectedEllipsoid.getCenter(), fittedEllipsoid.getCenter() );
+		final double[] expectedAxis = expectedEllipsoid.getRadii().clone();
+		final double[] fittedAxis = fittedEllipsoid.getRadii().clone();
 		Arrays.sort( expectedAxis );
 		Arrays.sort( fittedAxis );
-		double v = relativeDifference( expectedAxis[ 0 ], fittedAxis[ 0 ] );
-		double v1 = relativeDifference( expectedAxis[ 1 ], fittedAxis[ 1 ] );
-		double v2 = relativeDifference( expectedAxis[ 2 ], fittedAxis[ 2 ] );
-		boolean b = ( centerDistance <= ACCEPTED_CENTER_DISTANCE )
+		final double v = relativeDifference( expectedAxis[ 0 ], fittedAxis[ 0 ] );
+		final double v1 = relativeDifference( expectedAxis[ 1 ], fittedAxis[ 1 ] );
+		final double v2 = relativeDifference( expectedAxis[ 2 ], fittedAxis[ 2 ] );
+		final boolean b = ( centerDistance <= ACCEPTED_CENTER_DISTANCE )
 				&& ( v <= ACCEPTED_RELATIVE_AXES_DIFFERENCE )
 				&& ( v1 <= ACCEPTED_RELATIVE_AXES_DIFFERENCE )
 				&& ( v2 <= ACCEPTED_RELATIVE_AXES_DIFFERENCE );
@@ -104,7 +104,7 @@ public class FitEllipsoidPluginTest
 		return b;
 	}
 
-	private static double relativeDifference( double expected, double actual )
+	private static double relativeDifference( final double expected, final double actual )
 	{
 		return Math.abs( 1 - actual / expected );
 	}

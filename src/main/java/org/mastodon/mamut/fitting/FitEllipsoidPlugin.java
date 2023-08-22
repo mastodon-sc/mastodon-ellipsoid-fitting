@@ -28,7 +28,6 @@
  */
 package org.mastodon.mamut.fitting;
 
-
 import static org.mastodon.app.ui.ViewMenuBuilder.item;
 import static org.mastodon.app.ui.ViewMenuBuilder.menu;
 
@@ -45,7 +44,8 @@ import javax.annotation.Nonnull;
 import org.apache.commons.lang3.time.StopWatch;
 import org.mastodon.app.ui.ViewMenuBuilder;
 import org.mastodon.collection.RefSet;
-import org.mastodon.mamut.MamutAppModel;
+import org.mastodon.mamut.KeyConfigScopes;
+import org.mastodon.mamut.ProjectModel;
 import org.mastodon.mamut.fitting.edgel.Edgels;
 import org.mastodon.mamut.fitting.edgel.NoEllipsoidFoundException;
 import org.mastodon.mamut.fitting.edgel.SampleEllipsoidEdgel;
@@ -54,12 +54,11 @@ import org.mastodon.mamut.fitting.ui.EdgelsOverlay;
 import org.mastodon.mamut.fitting.ui.EllipsoidOverlay;
 import org.mastodon.mamut.model.Spot;
 import org.mastodon.mamut.plugin.MamutPlugin;
-import org.mastodon.mamut.plugin.MamutPluginAppModel;
-import org.mastodon.ui.keymap.CommandDescriptionProvider;
-import org.mastodon.ui.keymap.CommandDescriptions;
 import org.mastodon.ui.keymap.KeyConfigContexts;
 import org.scijava.AbstractContextual;
 import org.scijava.plugin.Plugin;
+import org.scijava.ui.behaviour.io.gui.CommandDescriptionProvider;
+import org.scijava.ui.behaviour.io.gui.CommandDescriptions;
 import org.scijava.ui.behaviour.util.AbstractNamedAction;
 import org.scijava.ui.behaviour.util.Actions;
 import org.scijava.ui.behaviour.util.RunnableAction;
@@ -72,7 +71,6 @@ import bdv.util.BdvStackSource;
 import bdv.util.Bounds;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.SourceAndConverter;
-
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
@@ -100,7 +98,6 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 	private static Map< String, String > menuTexts = new HashMap<>();
 
-
 	static
 	{
 		menuTexts.put( FIT_SELECTED_VERTICES, "Fit Selected Vertices" );
@@ -114,7 +111,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	{
 		public Descriptions()
 		{
-			super( KeyConfigContexts.MASTODON );
+			super( KeyConfigScopes.MAMUT, KeyConfigContexts.MASTODON );
 		}
 
 		@Override
@@ -129,19 +126,17 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 	private final AbstractNamedAction fitSelectedVerticesAction;
 
-	private MamutPluginAppModel pluginAppModel;
+	private ProjectModel projectModel;
 
 	public FitEllipsoidPlugin()
 	{
 		fitSelectedVerticesAction = new RunnableAction( FIT_SELECTED_VERTICES, this::fitSelectedVertices );
-		updateEnabledActions();
 	}
 
 	@Override
-	public void setAppPluginModel( final MamutPluginAppModel model )
+	public void setAppPluginModel( final ProjectModel model )
 	{
-		this.pluginAppModel = model;
-		updateEnabledActions();
+		this.projectModel = model;
 	}
 
 	@Override
@@ -165,25 +160,14 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		actions.namedAction( fitSelectedVerticesAction, FIT_SELECTED_VERTICES_KEYS );
 	}
 
-	private void updateEnabledActions()
-	{
-		final MamutAppModel appModel = ( pluginAppModel == null ) ? null : pluginAppModel.getAppModel();
-		fitSelectedVerticesAction.setEnabled( appModel != null );
-	}
-
 	void fitSelectedVertices()
 	{
 		// TODO: parameters to select which source to act on
 		final int sourceIndex = 0;
-
-		if ( pluginAppModel != null )
-		{
-			final MamutAppModel appModel = pluginAppModel.getAppModel();
-			final SourceAndConverter< ? > source = appModel.getSharedBdvData().getSources().get( sourceIndex );
-			if ( !( source.getSpimSource().getType() instanceof RealType ) )
-				throw new IllegalArgumentException( "Expected RealType image source" );
-			process( Cast.unchecked( source ) );
-		}
+		final SourceAndConverter< ? > source = projectModel.getSharedBdvData().getSources().get( sourceIndex );
+		if ( !( source.getSpimSource().getType() instanceof RealType ) )
+			throw new IllegalArgumentException( "Expected RealType image source" );
+		process( Cast.unchecked( source ) );
 	}
 
 	private static final boolean TRACE = false;
@@ -192,11 +176,10 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 	private static final boolean DEBUG_UI = false;
 
-	private <T extends RealType<T> > void process( final SourceAndConverter< T > source )
+	@SuppressWarnings( "unused" )
+	private < T extends RealType< T > > void process( final SourceAndConverter< T > source )
 	{
-		final MamutAppModel appModel = pluginAppModel.getAppModel();
-
-		final RefSet< Spot > vertices = appModel.getSelectionModel().getSelectedVertices();
+		final RefSet< Spot > vertices = projectModel.getSelectionModel().getSelectedVertices();
 		if ( vertices.isEmpty() )
 			System.err.println( "no vertex selected" );
 
@@ -207,13 +190,16 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		watch.start();
 
 		// parallelize over vertices
-		ArrayList< Spot > threadSafeVertices = asArrayList( vertices ); // NB: RefSet is not thread-safe for iteration
-		int totalTasks = vertices.size();
-		ReentrantReadWriteLock.WriteLock writeLock = appModel.getModel().getGraph().getLock().writeLock();
+		final ArrayList< Spot > threadSafeVertices = asArrayList( vertices );
+		// NB: RefSet is not thread-safe for iteration.
+		final int totalTasks = vertices.size();
+		final ReentrantReadWriteLock.WriteLock writeLock = projectModel.getModel().getGraph().getLock().writeLock();
 
-		Parallelization.getTaskExecutor().forEach( threadSafeVertices, spot -> { // loop over vertices in parallel using multiple threads
+		Parallelization.getTaskExecutor().forEach( threadSafeVertices, spot -> {
+			// loop over vertices in parallel using multiple threads
 
-			try {
+			try
+			{
 				final long t1 = System.currentTimeMillis();
 				final Ellipsoid ellipsoid = fitEllipsoid( spot, source );
 				final long runtime = System.currentTimeMillis() - t1;
@@ -231,7 +217,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 				if ( TRACE )
 					System.out.println( "Computed ellipsoid in " + runtime + "ms. Ellipsoid: " + ellipsoid );
 			}
-			catch ( NoEllipsoidFoundException e )
+			catch ( final NoEllipsoidFoundException e )
 			{
 				notFound.getAndIncrement();
 				if ( DEBUG )
@@ -240,14 +226,14 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 					System.out.println( "Reason: " + e.getMessage() );
 				}
 			}
-			catch ( Exception e )
+			catch ( final Exception e )
 			{
 				notFound.getAndIncrement();
-				System.err.println( "Error while fitting ellipsoid for spot: " + spot.getLabel());
+				System.err.println( "Error while fitting ellipsoid for spot: " + spot.getLabel() );
 				e.printStackTrace();
 			}
 
-			int outputRate = 1000;
+			final int outputRate = 1000;
 			if ( DEBUG && ( found.get() + notFound.get() ) % outputRate == 0 )
 				System.out.println( "Computed " + ( found.get() + notFound.get() ) + " of " + totalTasks
 						+ " ellipsoids ("
@@ -267,15 +253,15 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 		// set undo point if at least one spot was fitted
 		if ( found.get() > 0 )
-			appModel.getModel().setUndoPoint();
+			projectModel.getModel().setUndoPoint();
 	}
 
-	private static ArrayList< Spot > asArrayList( RefSet< Spot > vertices )
+	private static ArrayList< Spot > asArrayList( final RefSet< Spot > vertices )
 	{
-		ArrayList< Spot > list = new ArrayList<>();
+		final ArrayList< Spot > list = new ArrayList<>();
 		for ( final Spot spot : vertices )
 		{
-			Spot spotCopy = vertices.createRef();
+			final Spot spotCopy = vertices.createRef();
 			spotCopy.refTo( spot );
 			list.add( spotCopy );
 		}
@@ -285,13 +271,15 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	/**
 	 * Fit an ellipsoid for the given spot.
 	 *
-	 * @throws NoEllipsoidFoundException if the ellipsoid fitting algorithm simple does not
-	 *                yield a result.
-	 * @throws RuntimeException if there are other problems, e.g. the image source is not
-	 * 				  present or the image is not a {@link RealType}.
+	 * @throws NoEllipsoidFoundException
+	 *             if the ellipsoid fitting algorithm simple does not yield a
+	 *             result.
+	 * @throws RuntimeException
+	 *             if there are other problems, e.g. the image source is not
+	 *             present or the image is not a {@link RealType}.
 	 */
 	@Nonnull
-	private < T extends RealType< T > > Ellipsoid fitEllipsoid( Spot spot, SourceAndConverter< T > source )
+	private < T extends RealType< T > > Ellipsoid fitEllipsoid( final Spot spot, final SourceAndConverter< T > source )
 	{
 		// TODO: parameters -----------------
 		final double smoothSigma = 2;
@@ -310,11 +298,11 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		// ----------------------------------
 
 		final int timepoint = spot.getTimepoint();
-		AffineTransform3D sourceToGlobal = new AffineTransform3D();
+		final AffineTransform3D sourceToGlobal = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( timepoint, 0, sourceToGlobal );
-		RandomAccessibleInterval< T > frame = source.getSpimSource().getSource( timepoint, 0 );
+		final RandomAccessibleInterval< T > frame = source.getSpimSource().getSource( timepoint, 0 );
 
-		if (frame == null)
+		if ( frame == null )
 			throw new RuntimeException( "No image data for spot: " + spot.getLabel() + " timepoint: " + timepoint );
 
 		final RandomAccessibleInterval< T > cropped = cropSpot( sourceToGlobal, frame, spot );
@@ -345,8 +333,8 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		return ellipsoid;
 	}
 
-	private static <T extends RealType< T > > RandomAccessibleInterval< T > cropSpot( AffineTransform3D sourceToGlobal,
-			RandomAccessibleInterval< T > frame, Spot spot )
+	private static < T extends RealType< T > > RandomAccessibleInterval< T > cropSpot( final AffineTransform3D sourceToGlobal,
+			final RandomAccessibleInterval< T > frame, final Spot spot )
 	{
 		final double[] centerInGlobalCoordinates = spot.positionAsDoubleArray();
 		final double radius = Math.sqrt( spot.getBoundingSphereRadiusSquared() );
@@ -371,12 +359,12 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		return Views.interval( frame, interval );
 	}
 
-	private static RandomAccessibleInterval< FloatType > gaussianBlur( double sigma, double[] scale, RandomAccessibleInterval< FloatType > input )
+	private static RandomAccessibleInterval< FloatType > gaussianBlur( final double sigma, final double[] scale, final RandomAccessibleInterval< FloatType > input )
 	{
-		if( sigma <= 0.0 )
+		if ( sigma <= 0.0 )
 			return input;
-		long[] size = input.dimensionsAsLongArray();
-		long[] min = input.minAsLongArray();
+		final long[] size = input.dimensionsAsLongArray();
+		final long[] min = input.minAsLongArray();
 		final RandomAccessibleInterval< FloatType > img = ArrayImgs.floats( size );
 		final double[] sigmas = new double[ 3 ];
 		for ( int d = 0; d < 3; ++d )
@@ -392,7 +380,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		return Views.translate( img, min );
 	}
 
-	private static ArrayList< Edgel > getAllEgels( double minGradientMagnitude, AffineTransform3D sourceToGlobal, RandomAccessibleInterval< FloatType > input )
+	private static ArrayList< Edgel > getAllEgels( final double minGradientMagnitude, final AffineTransform3D sourceToGlobal, final RandomAccessibleInterval< FloatType > input )
 	{
 		final ArrayList< Edgel > lEdgels = SubpixelEdgelDetection.getEdgels( Views.zeroMin( input ),
 				new ArrayImgFactory<>( new FloatType() ), minGradientMagnitude );
@@ -404,7 +392,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		return Edgels.transformEdgels( lEdgels, zeroMinSourceToGlobal );
 	}
 
-	private static double[] extractScale( AffineTransform3D sourceToGlobal )
+	private static double[] extractScale( final AffineTransform3D sourceToGlobal )
 	{
 		final double[] scale = new double[ 3 ];
 		for ( int d = 0; d < 3; ++d )
@@ -412,20 +400,19 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		return scale;
 	}
 
-	private void showBdvDebugWindow( SourceAndConverter< ? > source, double outsideCutoffDistance, double insideCutoffDistance, double angleCutoffDistance,
-			AffineTransform3D sourceToGlobal, RandomAccessibleInterval< FloatType > input, ArrayList< Edgel > filteredEdgels, Ellipsoid ellipsoid )
+	private void showBdvDebugWindow( final SourceAndConverter< ? > source, final double outsideCutoffDistance, final double insideCutoffDistance, final double angleCutoffDistance,
+			final AffineTransform3D sourceToGlobal, final RandomAccessibleInterval< FloatType > input, final ArrayList< Edgel > filteredEdgels, final Ellipsoid ellipsoid )
 	{
 		final BdvStackSource< FloatType > inputSource =
 				BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
-		final MamutAppModel appModel = pluginAppModel.getAppModel();
-		final ConverterSetups setups = appModel.getSharedBdvData().getConverterSetups();
+		final ConverterSetups setups = projectModel.getSharedBdvData().getConverterSetups();
 		final ConverterSetup cs = setups.getConverterSetup( source );
 		final Bounds bounds = setups.getBounds().getBounds( cs );
 		inputSource.setDisplayRange( cs.getDisplayRangeMin(), cs.getDisplayRangeMax() );
 		inputSource.setDisplayRangeBounds( bounds.getMinBound(), bounds.getMaxBound() );
-		Bdv bdv = inputSource.getBdvHandle();
+		final Bdv bdv = inputSource.getBdvHandle();
 
-		EdgelsOverlay edgelsOverlay = new EdgelsOverlay( filteredEdgels, 0.01 );
+		final EdgelsOverlay edgelsOverlay = new EdgelsOverlay( filteredEdgels, 0.01 );
 		BdvFunctions.showOverlay( edgelsOverlay, "filtered edgels", Bdv.options().addTo( bdv ) );
 
 		BdvFunctions.showOverlay( new EllipsoidOverlay( ellipsoid ), "fitted ellipsoid",

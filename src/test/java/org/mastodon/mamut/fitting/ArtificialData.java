@@ -31,6 +31,16 @@ package org.mastodon.mamut.fitting;
 import java.util.Objects;
 import java.util.Random;
 
+import org.mastodon.collection.RefObjectMap;
+import org.mastodon.collection.ref.RefObjectHashMap;
+import org.mastodon.mamut.ProjectModel;
+import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
+import org.mastodon.mamut.model.Model;
+import org.mastodon.mamut.model.Spot;
+import org.mastodon.views.bdv.SharedBigDataViewerData;
+import org.scijava.Context;
+
+import ij.ImagePlus;
 import net.imagej.ImgPlus;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
@@ -44,26 +54,6 @@ import net.imglib2.util.Intervals;
 import net.imglib2.util.LinAlgHelpers;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
-
-import org.mastodon.collection.RefObjectMap;
-import org.mastodon.collection.ref.RefObjectHashMap;
-import org.mastodon.mamut.MamutAppModel;
-import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
-import org.mastodon.mamut.model.Model;
-import org.mastodon.mamut.model.Spot;
-import org.mastodon.mamut.plugin.MamutPlugins;
-import org.mastodon.ui.coloring.feature.FeatureColorModeManager;
-import org.mastodon.ui.keymap.Keymap;
-import org.mastodon.ui.keymap.KeymapManager;
-import org.mastodon.views.bdv.SharedBigDataViewerData;
-import org.mastodon.views.bdv.overlay.ui.RenderSettingsManager;
-import org.mastodon.views.grapher.display.style.DataDisplayStyleManager;
-import org.mastodon.views.trackscheme.display.style.TrackSchemeStyleManager;
-import org.scijava.ui.behaviour.KeyPressedManager;
-import org.scijava.ui.behaviour.util.Actions;
-
-import bdv.viewer.ViewerOptions;
-import ij.ImagePlus;
 
 /**
  * Renders a grid of ellipsoids in 3D, and wraps the result in a {@link MamutAppModel}.
@@ -79,114 +69,111 @@ public class ArtificialData
 
 	private final int numberOfSpots = columns * columns * columns;
 
-	private final MamutAppModel appModel;
+	private final ProjectModel appModel;
 
 	private final RefObjectMap< Spot, Ellipsoid > ellipsoids;
 
-	public ArtificialData()
+	public ArtificialData( final Context context )
 	{
-		Model model = new Model();
+		final Model model = new Model();
 		ellipsoids = new RefObjectHashMap<>( model.getGraph().vertices().getRefPool(), numberOfSpots );
-		Img< FloatType > image = ArrayImgs.floats( columns * size, columns * size, columns * size );
-		Spot ref = model.getGraph().vertexRef();
+		final Img< FloatType > image = ArrayImgs.floats( columns * size, columns * size, columns * size );
+		final Spot ref = model.getGraph().vertexRef();
 		for ( int i = 0; i < columns; i++ )
 			for ( int j = 0; j < columns; j++ )
 				for ( int k = 0; k < columns; k++ )
 				{
-					double[] center = { i * size + size / 2, j * size + size / 2, k * size + size / 2 };
-					Interval interval = Intervals.createMinSize( i * size, j * size, k * size, size, size, size );
-					Ellipsoid ellipsoid = randomizedEllipsoid( center );
-					Spot spot = model.getGraph().addVertex(ref);
+					final double[] center = { i * size + size / 2, j * size + size / 2, k * size + size / 2 };
+					final Interval interval = Intervals.createMinSize( i * size, j * size, k * size, size, size, size );
+					final Ellipsoid ellipsoid = randomizedEllipsoid( center );
+					final Spot spot = model.getGraph().addVertex(ref);
 					spot.init( 0, center, 10 );
 					ellipsoids.put( spot, ellipsoid );
 					drawSpot( image, interval, ellipsoid );
 				}
 
-		appModel = wrapAsAppModel( image, model );
+		appModel = wrapAsAppModel( image, model, context );
 		selectAllVerticies();
 	}
 
-	private static void drawSpot( Img< FloatType > image, Interval interval, Ellipsoid ellipsoid )
+	private static void drawSpot( final Img< FloatType > image, final Interval interval, final Ellipsoid ellipsoid )
 	{
-		IntervalView< FloatType > crop = Views.interval( image, interval );
+		final IntervalView< FloatType > crop = Views.interval( image, interval );
 		MultiVariantNormalDistributionRenderer.renderMultivariateNormalDistribution(
 				ellipsoid.getCenter(), ellipsoid.getCovariance(),
 				crop );
 	}
 
-	private static SharedBigDataViewerData asSharedBdvDataXyz( Img< FloatType > image1 )
+	private static SharedBigDataViewerData asSharedBdvDataXyz( final Img< FloatType > image1 )
 	{
-		ImagePlus image = ImgToVirtualStack.wrap( new ImgPlus<>( image1, "image", new AxisType[] { Axes.X, Axes.Y, Axes.Z } ) );
-		return Objects.requireNonNull( SharedBigDataViewerData.fromImagePlus( image, new ViewerOptions(), () -> {} ) );
+		final ImagePlus image = ImgToVirtualStack.wrap( new ImgPlus<>( image1, "image", new AxisType[] { Axes.X, Axes.Y, Axes.Z } ) );
+		return Objects.requireNonNull( SharedBigDataViewerData.fromImagePlus( image ) );
 	}
 
 	private void selectAllVerticies()
 	{
-		for ( Spot vertex : appModel.getModel().getGraph().vertices() )
+		for ( final Spot vertex : appModel.getModel().getGraph().vertices() )
 			appModel.getSelectionModel().setSelected( vertex, true );
 	}
 
-	private Ellipsoid randomizedEllipsoid( double[] center )
+	private Ellipsoid randomizedEllipsoid( final double[] center )
 	{
-		double[][] inputCovarianceMatrix = randomizedCovarianceMatrix();
-		double[] randomizedCenter = randomizeCenter( center );
+		final double[][] inputCovarianceMatrix = randomizedCovarianceMatrix();
+		final double[] randomizedCenter = randomizeCenter( center );
 		return new Ellipsoid( randomizedCenter, inputCovarianceMatrix, null, null, null );
 	}
 
-	private double[] randomizeCenter( double[] center )
+	private double[] randomizeCenter( final double[] center )
 	{
-		double[] offset = {
+		final double[] offset = {
 				randomDouble(- 5, 5),
 				randomDouble(- 5, 5),
 				randomDouble(- 5, 5)
 		};
-		double[] randomizedCenter = new double[ 3 ];
+		final double[] randomizedCenter = new double[ 3 ];
 		LinAlgHelpers.add( center, offset, randomizedCenter );
 		return randomizedCenter;
 	}
 
 	private double[][] randomizedCovarianceMatrix()
 	{
-		AffineTransform3D a = new AffineTransform3D();
-		double minAxis = 8;
-		double maxAxis = 16;
+		final AffineTransform3D a = new AffineTransform3D();
+		final double minAxis = 8;
+		final double maxAxis = 16;
 		a.scale( randomDouble( minAxis, maxAxis ), randomDouble( minAxis, maxAxis ), randomDouble( minAxis, maxAxis ) );
 		a.rotate( 0, randomDouble( 0, 2 * Math.PI ) );
 		a.rotate( 1, randomDouble( 0, 2 * Math.PI ) );
 		a.rotate( 2, randomDouble( 0, 2 * Math.PI ) );
-		AffineTransform3D b = transposed( a );
+		final AffineTransform3D b = transposed( a );
 		a.concatenate( b );
-		double[][] matrix = new double[ 3 ][ 3 ];
+		final double[][] matrix = new double[ 3 ][ 3 ];
 		for ( int i = 0; i < 3; i++ )
 			for ( int j = 0; j < 3; j++ )
 				matrix[ i ][ j ] = a.get( i, j );
 		return matrix;
 	}
 
-	private double randomDouble( double min, double max )
+	private double randomDouble( final double min, final double max )
 	{
 		return random.nextDouble() * ( max - min ) + min;
 	}
 
-	private static AffineTransform3D transposed( AffineTransform3D transform )
+	private static AffineTransform3D transposed( final AffineTransform3D transform )
 	{
-		AffineTransform3D r = new AffineTransform3D();
+		final AffineTransform3D r = new AffineTransform3D();
 		for ( int i = 0; i < 3; i++ )
 			for ( int j = 0; j < 3; j++ )
 				r.set( transform.get( i, j ), j, i );
 		return r;
 	}
 
-	private static MamutAppModel wrapAsAppModel( Img< FloatType > image, Model model )
+	private static ProjectModel wrapAsAppModel( final Img< FloatType > image, final Model model, final Context context )
 	{
-		SharedBigDataViewerData sharedBigDataViewerData = asSharedBdvDataXyz( image );
-		Keymap keymap = new Keymap();
-		return new MamutAppModel( model, sharedBigDataViewerData, new KeyPressedManager(), new TrackSchemeStyleManager(),
-				new DataDisplayStyleManager(), new RenderSettingsManager(), new FeatureColorModeManager(), new KeymapManager(),
-				new MamutPlugins( keymap ), new Actions( keymap.getConfig() ) );
+		final SharedBigDataViewerData sharedBigDataViewerData = asSharedBdvDataXyz( image );
+		return ProjectModel.create( context, model, sharedBigDataViewerData, null );
 	}
 
-	public MamutAppModel getAppModel()
+	public ProjectModel getAppModel()
 	{
 		return appModel;
 	}

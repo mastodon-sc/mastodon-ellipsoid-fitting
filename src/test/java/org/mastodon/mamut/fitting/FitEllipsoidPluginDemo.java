@@ -28,15 +28,13 @@
  */
 package org.mastodon.mamut.fitting;
 
-import java.util.HashMap;
-
 import javax.annotation.Nonnull;
 
-import net.imglib2.type.numeric.RealType;
+import org.mastodon.mamut.ProjectModel;
+import org.mastodon.mamut.views.bdv.MamutViewBdv;
+import org.scijava.Context;
 
-import org.mastodon.mamut.MamutAppModel;
-import org.mastodon.mamut.MamutViewBdv;
-import org.mastodon.mamut.plugin.MamutPluginAppModel;
+import net.imglib2.type.numeric.RealType;
 
 /**
  * Runs the {@link FitEllipsoidPlugin} on synthetic data
@@ -45,18 +43,17 @@ import org.mastodon.mamut.plugin.MamutPluginAppModel;
 public class FitEllipsoidPluginDemo
 {
 
-	public static void main( String... args )
+	public static void main( final String... args )
 	{
-		ArtificialData data = new ArtificialData();
-		FitEllipsoidPlugin plugin = new FitEllipsoidPlugin();
-		plugin.setAppPluginModel( new MamutPluginAppModel( data.getAppModel(), null ) );
+		final ArtificialData data = new ArtificialData( new Context() );
+		final FitEllipsoidPlugin plugin = new FitEllipsoidPlugin();
+		plugin.setAppPluginModel( data.getAppModel() );
 		plugin.fitSelectedVertices();
 		showBdvWindow( data.getAppModel() );
 	}
 
-	private static < T extends RealType< T > > void showBdvWindow( @Nonnull MamutAppModel appModel )
+	private static < T extends RealType< T > > void showBdvWindow( @Nonnull final ProjectModel appModel )
 	{
-		MamutViewBdv ts = new MamutViewBdv( appModel, new HashMap<>() );
-		ts.getFrame().setVisible( true );
+		appModel.getWindowManager().createView( MamutViewBdv.class );
 	}
 }
