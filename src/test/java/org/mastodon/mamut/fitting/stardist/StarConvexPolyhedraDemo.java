@@ -39,6 +39,7 @@ public class StarConvexPolyhedraDemo
 
 		ellipsoidIterable.reset( spot );
 		ellipsoidIterable.forEach( byteType -> {byteType.set( ( byte ) 100 );} );
+		// TODO: can this be further optimized in terms of performance?
 		polyhedraIterable.reset( polyhedra, 0 );
 		polyhedraIterable.forEach( byteType -> {byteType.set( ( byte ) 100 );} );
 
