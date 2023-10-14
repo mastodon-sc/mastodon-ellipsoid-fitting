@@ -58,6 +58,7 @@ public class StarConvexPolyhedra
 		for ( int i = 0; i < nPoints; i++ )
 		{
 			double[] point = new double[ 3 ];
+			// TODO allow to correct for anisotropy here
 			LinAlgHelpers.scale( lattice.get( i ), distances.get( i ), point );
 			LinAlgHelpers.add( center, point, point );
 			points.add( point );
