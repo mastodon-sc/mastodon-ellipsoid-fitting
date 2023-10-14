@@ -1,6 +1,6 @@
 package org.mastodon.mamut.fitting.stardist;
 
-import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
+import net.imglib2.util.LinAlgHelpers;
 import org.jzy3d.chart.Chart;
 import org.jzy3d.chart.ChartLauncher;
 import org.jzy3d.chart.controllers.mouse.camera.AWTCameraMouseController;
@@ -29,8 +29,8 @@ public class StarConvexPolyhedraVisualization
 		Chart chart = new Chart( factory, Quality.Advanced() );
 		Scene scene = chart.getScene();
 
-		// testLattice( scene );
-		testContains( scene );
+		testLattice( scene );
+		//testContains( scene );
 
 		// Add mouse controllers for interaction (optional)
 		chart.addController( new AWTCameraMouseController( chart ) );
@@ -106,17 +106,19 @@ public class StarConvexPolyhedraVisualization
 		latticeScatter.setWidth( 5.0f );
 		scene.add( latticeScatter );
 
-		Vector3D center = new Vector3D( 0, 0, 0 );
-		Vector3D candidate = new Vector3D( 0, 2, 0 );
-		Vector3D candidateOnSurface = candidate.subtract( center ).normalize();
+		double[] center = new double[] { 0, 0, 0 };
+		double[] candidate = new double[] { 0, 2, 0 };
+		double[] candidateOnSurface = new double[ 3 ];
+		LinAlgHelpers.subtract( candidateOnSurface, center, candidateOnSurface );
+		LinAlgHelpers.normalize( candidateOnSurface );
 
-		List< double[] > nearestPoints = polyhedra.findNearestPoints( candidate.toArray() );
+		List< double[] > nearestPoints = polyhedra.findNearestPoints( candidate );
 		List< Coord3d > nearestPointsJzy = new ArrayList<>();
 		nearestPoints.forEach( point -> nearestPointsJzy.add( new Coord3d( point ) ) );
 
-		Coord3d centerJzy = toCoord3d( center );
-		Coord3d candidateJzy = toCoord3d( candidate );
-		Coord3d candidateOnSurfaceJzy = toCoord3d( candidateOnSurface );
+		Coord3d centerJzy = new Coord3d( center );
+		Coord3d candidateJzy = new Coord3d( candidate );
+		Coord3d candidateOnSurfaceJzy = new Coord3d( candidateOnSurface );
 
 		Scatter centerScatter = new Scatter( Collections.singletonList( centerJzy ), Color.GREEN );
 		centerScatter.setWidth( 20f );
@@ -138,14 +140,9 @@ public class StarConvexPolyhedraVisualization
 		nearestPointsJzy.forEach( triangle::add );
 		scene.add( triangle );
 
-		boolean isInside = polyhedra.contains( candidate.toArray() );
+		boolean isInside = polyhedra.contains( candidate );
 		System.out.println( "candidate inside = " + isInside );
-		isInside = polyhedra.contains( center.toArray() );
+		isInside = polyhedra.contains( center );
 		System.out.println( "center inside = " + isInside );
-	}
-
-	private static Coord3d toCoord3d( Vector3D v )
-	{
-		return new Coord3d( v.getX(), v.getY(), v.getZ() );
 	}
 }
