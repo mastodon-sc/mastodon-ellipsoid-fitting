@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Requires:
@@ -69,11 +70,16 @@ public class StarDistDemo
 		Model model = Model.createDeepLearningModel( MODEL_DIRECTORY, MODEL_DIRECTORY, engineInfo );
 		// AvailableEngines.getForCurrentOS().getVersions().forEach( System.out::println );
 		RandomAccessibleInterval< ? extends RealType< ? > > image = loadImage( DATA_DIRECTORY + File.separator + "stardist_single.xml" );
+		System.out.println( "imageShape: " + longArrayToString( image.dimensionsAsLongArray() ) );
+		// TODO: Create a lower resolution image to speed up the computation
+		// https://openaccess.thecvf.com/content_WACV_2020/papers/Weigert_Star-convex_Polyhedra_for_3D_Object_Detection_and_Segmentation_in_Microscopy_WACV_2020_paper.pdf
+		// Section 2.2.: "To save computation and memory we predict at a grid of lower spatial resolution than the input image, since a dense (i.e., per input pixel) output is often not necessary."
+		// cf.: https://github.com/stardist/stardist/blob/master/stardist/models/model3d.py#L123
+		// Subsampling factors (must be powers of 2) for each of the axes. Model will predict on a subsampled grid for increased efficiency and larger field of view.
+		Tensor< ? > prediction = processImage( image, model );
 
-		List< Tensor< ? > > prediction = processImage( image, model );
-
-		RandomAccessibleInterval< FloatType > distances = getDistances( Cast.unchecked( prediction.get( 0 ) ) );
-		RandomAccessibleInterval< FloatType > probabilities = getProbabilities( Cast.unchecked( prediction.get( 0 ) ) );
+		RandomAccessibleInterval< FloatType > distances = getDistances( Cast.unchecked( prediction ) );
+		RandomAccessibleInterval< FloatType > probabilities = getProbabilities( Cast.unchecked( prediction ) );
 		StarDist starDist = new StarDist( distances, probabilities );
 		/*
 		for ( List< SimpleMatrix > starConvexShape : starDist.getStarConvexShapes() )
@@ -87,7 +93,7 @@ public class StarDistDemo
 		// computeEllipsoids( candidates );
 	}
 
-	private static List< Tensor< ? > > processImage( RandomAccessibleInterval< ? extends RealType< ? > > image, Model model )
+	private static Tensor< ? > processImage( RandomAccessibleInterval< ? extends RealType< ? > > image, Model model )
 			throws Exception
 	{
 		String axes = "xyzbc";
@@ -98,7 +104,7 @@ public class StarDistDemo
 		model.runModel( inputTensors, outputTensors );
 		model.closeModel();
 
-		return outputTensors;
+		return outputTensors.get( 0 );
 	}
 
 	private static EngineInfo setupEngine()
@@ -197,27 +203,33 @@ public class StarDistDemo
 	private static RandomAccessibleInterval< FloatType > getDistances( Tensor< FloatType > prediction )
 	{
 		long[] tensorShape = Arrays.stream( prediction.getShape() ).asLongStream().toArray();
+		System.out.println( "tensorShape: " + longArrayToString( tensorShape ) );
 		// remove the ray dimension
 		tensorShape[ 4 ]--;
 		return Views.offsetInterval( prediction.getData(), new long[] { 0, 0, 0, 1, 0 }, tensorShape );
 	}
 
+	private static String longArrayToString( long[] longArray )
+	{
+		return Arrays.stream( longArray ).mapToObj( String::valueOf ).collect( Collectors.joining( ", " ) );
+	}
+
 	private static void computeEllipsoids( StarDist starDist )
 	{
 		List< SimpleMatrix > ellipsoids = new ArrayList<>();
-		for ( List< SimpleMatrix > surface : starDist.getStarConvexShapes() )
+		for ( StarConvexPolyhedra surface : starDist.getStarConvexShapes() )
 		{
-			SimpleMatrix lrX = new SimpleMatrix( surface.size(), 9 ); // 9 parameters are required to describe an ellipsoid.
-			SimpleMatrix lrY = new SimpleMatrix( surface.size(), 1 );
+			List< double[] > points = surface.getPoints();
+			SimpleMatrix lrX = new SimpleMatrix( points.size(), 9 ); // 9 parameters are required to describe an ellipsoid.
+			SimpleMatrix lrY = new SimpleMatrix( points.size(), 1 );
 			lrY.set( 1 ); // normalization for the ellipsoid eq.
 
-			for ( int row = 0; row < surface.size(); row++ )
+			for ( int row = 0; row < points.size(); row++ )
 			{
-				SimpleMatrix point = surface.get( row );
-
-				double x = point.get( 0 );
-				double y = point.get( 1 );
-				double z = point.get( 2 );
+				double[] point = points.get( row );
+				double x = point[ 0 ];
+				double y = point[ 1 ];
+				double z = point[ 2 ];
 
 				lrX.set( row, 0, x * x );
 				lrX.set( row, 1, y * y );
