@@ -57,7 +57,7 @@ public class StarDistDemo
 
 	private static final String ENGINE_DIRECTORY = "dl-engines";
 
-	private static final String MODEL_DIRECTORY = ENGINE_DIRECTORY + File.separator + "stardist-model";
+	private static final String MODEL_DIRECTORY = ENGINE_DIRECTORY + File.separator + "stardist-model-tensorflow";
 
 	// private static final String MODEL_DIRECTORY = ENGINE_DIRECTORY + File.separator + "stardist-model-pytorch";
 
