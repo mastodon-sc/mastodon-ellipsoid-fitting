@@ -48,13 +48,18 @@ import java.util.stream.Collectors;
  */
 public class StarDistDemo
 {
-	private static final String ENGINE = "tensorflow_saved_model_bundle";
+	private static final String ENGINE = EngineInfo.getBioimageioTfKey();
+
+	// private static final String ENGINE = EngineInfo.getBioimageioPytorchKey(); // torchscript
 
 	private static final String VERSION = "1.15.0";
+	// private static final String VERSION = "2.0.0";
 
 	private static final String ENGINE_DIRECTORY = "dl-engines";
 
 	private static final String MODEL_DIRECTORY = ENGINE_DIRECTORY + File.separator + "stardist-model";
+
+	// private static final String MODEL_DIRECTORY = ENGINE_DIRECTORY + File.separator + "stardist-model-pytorch";
 
 	private static final String DATA_DIRECTORY = ENGINE_DIRECTORY + File.separator + "stardist-data";
 
