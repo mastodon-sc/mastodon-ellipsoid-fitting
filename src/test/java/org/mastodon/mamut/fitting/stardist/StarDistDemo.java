@@ -81,14 +81,7 @@ public class StarDistDemo
 		RandomAccessibleInterval< FloatType > distances = getDistances( Cast.unchecked( prediction ) );
 		RandomAccessibleInterval< FloatType > probabilities = getProbabilities( Cast.unchecked( prediction ) );
 		StarDist starDist = new StarDist( distances, probabilities );
-		/*
-		for ( List< SimpleMatrix > starConvexShape : starDist.getStarConvexShapes() )
-		{
-			System.out.println( "-- Star Convex Shape: --" );
-			starConvexShape.forEach( simpleMatrix -> System.out.println( "Point: " + simpleMatrix.toString() ) );
-		}
 
-		 */
 
 		// computeEllipsoids( candidates );
 	}
