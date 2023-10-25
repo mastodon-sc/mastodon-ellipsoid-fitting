@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting.test;
+package org.mastodon.mamut.fitting;
 
 import static org.junit.Assert.assertEquals;
 
