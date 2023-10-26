@@ -74,7 +74,7 @@ public class ArtificialData
 
 	private final Context context;
 
-	private final HeadlessProjectModel headlessProjectModel;
+	private final MinimalProjectModel minimalProjectModel;
 
 	private final RefObjectMap< Spot, Ellipsoid > ellipsoids;
 
@@ -99,7 +99,7 @@ public class ArtificialData
 				}
 		SharedBigDataViewerData sharedBDVData = asSharedBdvDataXyz( image );
 		SelectionModel< Spot, Link > selectionModel = new DefaultSelectionModel<>( model.getGraph(), model.getGraphIdBimap() );
-		headlessProjectModel = new HeadlessProjectModel( model, sharedBDVData, selectionModel );
+		minimalProjectModel = new DefaultMinimalProjectModel( model, sharedBDVData, selectionModel );
 		selectAllVerticies();
 	}
 
@@ -119,8 +119,8 @@ public class ArtificialData
 
 	private void selectAllVerticies()
 	{
-		for ( final Spot vertex : headlessProjectModel.getModel().getGraph().vertices() )
-			headlessProjectModel.getSelectionModel().setSelected( vertex, true );
+		for ( final Spot vertex : minimalProjectModel.getModel().getGraph().vertices() )
+			minimalProjectModel.getSelectionModel().setSelected( vertex, true );
 	}
 
 	private Ellipsoid randomizedEllipsoid( final double[] center )
@@ -176,12 +176,12 @@ public class ArtificialData
 
 	public ProjectModel getAppModel()
 	{
-		return ProjectModel.create( context, headlessProjectModel.getModel(), headlessProjectModel.getSharedBdvData(), null );
+		return ProjectModel.create( context, minimalProjectModel.getModel(), minimalProjectModel.getSharedBdvData(), null );
 	}
 
-	public HeadlessProjectModel getHeadlessProjectModel()
+	public MinimalProjectModel getHeadlessProjectModel()
 	{
-		return headlessProjectModel;
+		return minimalProjectModel;
 	}
 
 	public RefObjectMap< Spot, Ellipsoid> getExpectedEllipsoids()

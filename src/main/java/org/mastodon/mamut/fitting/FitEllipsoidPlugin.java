@@ -126,7 +126,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 	private final AbstractNamedAction fitSelectedVerticesAction;
 
-	private HeadlessProjectModel headlessProjectModel;
+	private MinimalProjectModel minimalProjectModel;
 
 	public FitEllipsoidPlugin()
 	{
@@ -136,12 +136,12 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	@Override
 	public void setAppPluginModel( final ProjectModel projectModel )
 	{
-		this.headlessProjectModel = new HeadlessProjectModel( projectModel );
+		this.minimalProjectModel = new DefaultMinimalProjectModel( projectModel );
 	}
 
-	void setHeadlessProjectModel( final HeadlessProjectModel headlessProjectModel )
+	void setHeadlessProjectModel( final MinimalProjectModel minimalProjectModel )
 	{
-		this.headlessProjectModel = headlessProjectModel;
+		this.minimalProjectModel = minimalProjectModel;
 	}
 
 	@Override
@@ -169,7 +169,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	{
 		// TODO: parameters to select which source to act on
 		final int sourceIndex = 0;
-		final SourceAndConverter< ? > source = headlessProjectModel.getSharedBdvData().getSources().get( sourceIndex );
+		final SourceAndConverter< ? > source = minimalProjectModel.getSharedBdvData().getSources().get( sourceIndex );
 		if ( !( source.getSpimSource().getType() instanceof RealType ) )
 			throw new IllegalArgumentException( "Expected RealType image source" );
 		process( Cast.unchecked( source ) );
@@ -184,7 +184,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	@SuppressWarnings( "unused" )
 	private < T extends RealType< T > > void process( final SourceAndConverter< T > source )
 	{
-		final RefSet< Spot > vertices = headlessProjectModel.getSelectionModel().getSelectedVertices();
+		final RefSet< Spot > vertices = minimalProjectModel.getSelectionModel().getSelectedVertices();
 		if ( vertices.isEmpty() )
 			System.err.println( "no vertex selected" );
 
@@ -198,7 +198,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		final ArrayList< Spot > threadSafeVertices = asArrayList( vertices );
 		// NB: RefSet is not thread-safe for iteration.
 		final int totalTasks = vertices.size();
-		final ReentrantReadWriteLock.WriteLock writeLock = headlessProjectModel.getModel().getGraph().getLock().writeLock();
+		final ReentrantReadWriteLock.WriteLock writeLock = minimalProjectModel.getModel().getGraph().getLock().writeLock();
 
 		Parallelization.getTaskExecutor().forEach( threadSafeVertices, spot -> {
 			// loop over vertices in parallel using multiple threads
@@ -258,7 +258,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 		// set undo point if at least one spot was fitted
 		if ( found.get() > 0 )
-			headlessProjectModel.getModel().setUndoPoint();
+			minimalProjectModel.getModel().setUndoPoint();
 	}
 
 	private static ArrayList< Spot > asArrayList( final RefSet< Spot > vertices )
@@ -410,7 +410,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	{
 		final BdvStackSource< FloatType > inputSource =
 				BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
-		final ConverterSetups setups = headlessProjectModel.getSharedBdvData().getConverterSetups();
+		final ConverterSetups setups = minimalProjectModel.getSharedBdvData().getConverterSetups();
 		final ConverterSetup cs = setups.getConverterSetup( source );
 		final Bounds bounds = setups.getBounds().getBounds( cs );
 		inputSource.setDisplayRange( cs.getDisplayRangeMin(), cs.getDisplayRangeMax() );

@@ -7,7 +7,10 @@ import org.mastodon.mamut.model.Spot;
 import org.mastodon.model.SelectionModel;
 import org.mastodon.views.bdv.SharedBigDataViewerData;
 
-public class HeadlessProjectModel
+/**
+ * A default implementation of {@link MinimalProjectModel}.
+ */
+public class DefaultMinimalProjectModel implements MinimalProjectModel
 {
 	private final Model model;
 
@@ -15,7 +18,7 @@ public class HeadlessProjectModel
 
 	private final SelectionModel< Spot, Link > selectionModel;
 
-	HeadlessProjectModel(
+	DefaultMinimalProjectModel(
 			final Model model, final SharedBigDataViewerData sharedBdvData, final SelectionModel< Spot, Link > selectionModel
 	)
 	{
@@ -24,21 +27,24 @@ public class HeadlessProjectModel
 		this.selectionModel = selectionModel;
 	}
 
-	public HeadlessProjectModel( final ProjectModel projectModel )
+	public DefaultMinimalProjectModel( final ProjectModel projectModel )
 	{
 		this( projectModel.getModel(), projectModel.getSharedBdvData(), projectModel.getSelectionModel() );
 	}
 
+	@Override
 	public Model getModel()
 	{
 		return model;
 	}
 
+	@Override
 	public SharedBigDataViewerData getSharedBdvData()
 	{
 		return sharedBdvData;
 	}
 
+	@Override
 	public SelectionModel< Spot, Link > getSelectionModel()
 	{
 		return selectionModel;
