@@ -35,8 +35,11 @@ import org.mastodon.collection.RefObjectMap;
 import org.mastodon.collection.ref.RefObjectHashMap;
 import org.mastodon.mamut.ProjectModel;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
+import org.mastodon.mamut.model.Link;
 import org.mastodon.mamut.model.Model;
 import org.mastodon.mamut.model.Spot;
+import org.mastodon.model.DefaultSelectionModel;
+import org.mastodon.model.SelectionModel;
 import org.mastodon.views.bdv.SharedBigDataViewerData;
 import org.scijava.Context;
 
@@ -56,7 +59,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 /**
- * Renders a grid of ellipsoids in 3D, and wraps the result in a {@link MamutAppModel}.
+ * Renders a grid of ellipsoids in 3D, and wraps the result in a {@link ProjectModel}.
  */
 public class ArtificialData
 {
@@ -69,12 +72,15 @@ public class ArtificialData
 
 	private final int numberOfSpots = columns * columns * columns;
 
-	private final ProjectModel appModel;
+	private final Context context;
+
+	private final HeadlessProjectModel headlessProjectModel;
 
 	private final RefObjectMap< Spot, Ellipsoid > ellipsoids;
 
 	public ArtificialData( final Context context )
 	{
+		this.context = context;
 		final Model model = new Model();
 		ellipsoids = new RefObjectHashMap<>( model.getGraph().vertices().getRefPool(), numberOfSpots );
 		final Img< FloatType > image = ArrayImgs.floats( columns * size, columns * size, columns * size );
@@ -91,8 +97,9 @@ public class ArtificialData
 					ellipsoids.put( spot, ellipsoid );
 					drawSpot( image, interval, ellipsoid );
 				}
-
-		appModel = wrapAsAppModel( image, model, context );
+		SharedBigDataViewerData sharedBDVData = asSharedBdvDataXyz( image );
+		SelectionModel< Spot, Link > selectionModel = new DefaultSelectionModel<>( model.getGraph(), model.getGraphIdBimap() );
+		headlessProjectModel = new HeadlessProjectModel( model, sharedBDVData, selectionModel );
 		selectAllVerticies();
 	}
 
@@ -112,8 +119,8 @@ public class ArtificialData
 
 	private void selectAllVerticies()
 	{
-		for ( final Spot vertex : appModel.getModel().getGraph().vertices() )
-			appModel.getSelectionModel().setSelected( vertex, true );
+		for ( final Spot vertex : headlessProjectModel.getModel().getGraph().vertices() )
+			headlessProjectModel.getSelectionModel().setSelected( vertex, true );
 	}
 
 	private Ellipsoid randomizedEllipsoid( final double[] center )
@@ -167,15 +174,14 @@ public class ArtificialData
 		return r;
 	}
 
-	private static ProjectModel wrapAsAppModel( final Img< FloatType > image, final Model model, final Context context )
-	{
-		final SharedBigDataViewerData sharedBigDataViewerData = asSharedBdvDataXyz( image );
-		return ProjectModel.create( context, model, sharedBigDataViewerData, null );
-	}
-
 	public ProjectModel getAppModel()
 	{
-		return appModel;
+		return ProjectModel.create( context, headlessProjectModel.getModel(), headlessProjectModel.getSharedBdvData(), null );
+	}
+
+	public HeadlessProjectModel getHeadlessProjectModel()
+	{
+		return headlessProjectModel;
 	}
 
 	public RefObjectMap< Spot, Ellipsoid> getExpectedEllipsoids()
