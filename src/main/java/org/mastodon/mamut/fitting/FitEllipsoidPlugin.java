@@ -136,10 +136,10 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	@Override
 	public void setAppPluginModel( final ProjectModel projectModel )
 	{
-		this.minimalProjectModel = new DefaultMinimalProjectModel( projectModel );
+		this.minimalProjectModel = new MinimalProjectModel( projectModel );
 	}
 
-	void setHeadlessProjectModel( final MinimalProjectModel minimalProjectModel )
+	void setMinimalProjectModel( final MinimalProjectModel minimalProjectModel )
 	{
 		this.minimalProjectModel = minimalProjectModel;
 	}

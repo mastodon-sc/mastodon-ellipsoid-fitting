@@ -99,7 +99,7 @@ public class ArtificialData
 				}
 		SharedBigDataViewerData sharedBDVData = asSharedBdvDataXyz( image );
 		SelectionModel< Spot, Link > selectionModel = new DefaultSelectionModel<>( model.getGraph(), model.getGraphIdBimap() );
-		minimalProjectModel = new DefaultMinimalProjectModel( model, sharedBDVData, selectionModel );
+		minimalProjectModel = new MinimalProjectModel( model, sharedBDVData, selectionModel );
 		selectAllVerticies();
 	}
 

@@ -57,7 +57,7 @@ public class FitEllipsoidPluginTest
 		final ArtificialData data = new ArtificialData( new Context() );
 		final StopWatch watch = StopWatch.createAndStart();
 		final FitEllipsoidPlugin plugin = new FitEllipsoidPlugin();
-		plugin.setHeadlessProjectModel( data.getHeadlessProjectModel() );
+		plugin.setMinimalProjectModel( data.getHeadlessProjectModel() );
 		plugin.fitSelectedVertices();
 		System.out.println( watch );
 		final int success = countCorrectEllipsoids( data );

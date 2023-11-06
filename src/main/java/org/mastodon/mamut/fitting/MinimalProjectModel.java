@@ -1,5 +1,6 @@
 package org.mastodon.mamut.fitting;
 
+import org.mastodon.mamut.ProjectModel;
 import org.mastodon.mamut.model.Link;
 import org.mastodon.mamut.model.Model;
 import org.mastodon.mamut.model.Spot;
@@ -13,23 +14,40 @@ import org.mastodon.views.bdv.SharedBigDataViewerData;
  *
  * @author Stefan Hahmann
  */
-public interface MinimalProjectModel
+public class MinimalProjectModel
 {
-	/**
-	 * Gets the {@link Model} of the project, i.e. all data tracking related data such as the graph and feature.
-	 * @return the model.
-	 */
-	Model getModel();
+	private final Model model;
 
-	/**
-	 * Gets the {@link SharedBigDataViewerData} of the project, i.e. the image data.
-	 * @return the shared BDV data.
-	 */
-	SharedBigDataViewerData getSharedBdvData();
+	private final SharedBigDataViewerData sharedBdvData;
 
-	/**
-	 * Gets the {@link SelectionModel} of the project, i.e. the selection of spots and links.
-	 * @return the selection model.
-	 */
-	SelectionModel< Spot, Link > getSelectionModel();
+	private final SelectionModel< Spot, Link > selectionModel;
+
+	MinimalProjectModel(
+			final Model model, final SharedBigDataViewerData sharedBdvData, final SelectionModel< Spot, Link > selectionModel
+	)
+	{
+		this.model = model;
+		this.sharedBdvData = sharedBdvData;
+		this.selectionModel = selectionModel;
+	}
+
+	public MinimalProjectModel( final ProjectModel projectModel )
+	{
+		this( projectModel.getModel(), projectModel.getSharedBdvData(), projectModel.getSelectionModel() );
+	}
+
+	public Model getModel()
+	{
+		return model;
+	}
+
+	public SharedBigDataViewerData getSharedBdvData()
+	{
+		return sharedBdvData;
+	}
+
+	public SelectionModel< Spot, Link > getSelectionModel()
+	{
+		return selectionModel;
+	}
 }
