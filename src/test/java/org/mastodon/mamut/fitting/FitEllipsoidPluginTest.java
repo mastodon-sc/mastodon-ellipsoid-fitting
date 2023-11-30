@@ -57,11 +57,11 @@ public class FitEllipsoidPluginTest
 		final ArtificialData data = new ArtificialData( new Context() );
 		final StopWatch watch = StopWatch.createAndStart();
 		final FitEllipsoidPlugin plugin = new FitEllipsoidPlugin();
-		plugin.setMinimalProjectModel( data.getHeadlessProjectModel() );
+		plugin.setMinimalProjectModel( data.getMinimalProjectModel() );
 		plugin.fitSelectedVertices();
 		System.out.println( watch );
 		final int success = countCorrectEllipsoids( data );
-		ModelGraph graph = data.getHeadlessProjectModel().getModel().getGraph();
+		ModelGraph graph = data.getMinimalProjectModel().getModel().getGraph();
 		assertEquals( "Not all ellipsoids were fitted correctly.", graph.vertices().size(), success );
 	}
 
@@ -69,7 +69,7 @@ public class FitEllipsoidPluginTest
 	{
 		int success = 0;
 		final RefObjectMap< Spot, Ellipsoid > expectedEllipsoids = data.getExpectedEllipsoids();
-		for ( final Spot spot : data.getHeadlessProjectModel().getModel().getGraph().vertices() )
+		for ( final Spot spot : data.getMinimalProjectModel().getModel().getGraph().vertices() )
 		{
 			final Ellipsoid actualEllipsoid = asEllipsoid( spot );
 			final Ellipsoid expectedEllipsoid = expectedEllipsoids.get( spot );

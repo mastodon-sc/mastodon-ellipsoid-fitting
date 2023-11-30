@@ -179,7 +179,7 @@ public class ArtificialData
 		return ProjectModel.create( context, minimalProjectModel.getModel(), minimalProjectModel.getSharedBdvData(), null );
 	}
 
-	public MinimalProjectModel getHeadlessProjectModel()
+	public MinimalProjectModel getMinimalProjectModel()
 	{
 		return minimalProjectModel;
 	}
