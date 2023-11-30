@@ -35,6 +35,7 @@ import java.util.Arrays;
 import org.junit.Test;
 import org.mastodon.collection.RefObjectMap;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
+import org.mastodon.mamut.model.ModelGraph;
 import org.mastodon.mamut.model.Spot;
 import org.scijava.Context;
 
@@ -56,18 +57,20 @@ public class FitEllipsoidPluginTest
 		final ArtificialData data = new ArtificialData( new Context() );
 		final StopWatch watch = StopWatch.createAndStart();
 		final FitEllipsoidPlugin plugin = new FitEllipsoidPlugin();
-		plugin.setAppPluginModel( data.getAppModel() );
+		plugin.setMinimalProjectModel( data.getMinimalProjectModel() );
 		plugin.fitSelectedVertices();
 		System.out.println( watch );
 		final int success = countCorrectEllipsoids( data );
-		assertEquals( "Not all ellipsoids were fitted correctly.", data.getAppModel().getModel().getGraph().vertices().size(), success );
+		ModelGraph graph = data.getMinimalProjectModel().getModel().getGraph();
+		assertEquals( "Not all ellipsoids were fitted correctly.", graph.vertices().size(), success );
 	}
 
 	private static int countCorrectEllipsoids( final ArtificialData data )
 	{
 		int success = 0;
 		final RefObjectMap< Spot, Ellipsoid > expectedEllipsoids = data.getExpectedEllipsoids();
-		for( final Spot spot : data.getAppModel().getModel().getGraph().vertices() ) {
+		for ( final Spot spot : data.getMinimalProjectModel().getModel().getGraph().vertices() )
+		{
 			final Ellipsoid actualEllipsoid = asEllipsoid( spot );
 			final Ellipsoid expectedEllipsoid = expectedEllipsoids.get( spot );
 			final boolean equal = isEllipsoidEqual( expectedEllipsoid, actualEllipsoid );
