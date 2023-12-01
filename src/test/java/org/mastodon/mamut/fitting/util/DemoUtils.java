@@ -9,6 +9,7 @@ import net.imglib2.img.display.imagej.ImgToVirtualStack;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import org.mastodon.mamut.ProjectModel;
+import org.mastodon.mamut.fitting.MinimalProjectModel;
 import org.mastodon.mamut.model.Link;
 import org.mastodon.mamut.model.Model;
 import org.mastodon.mamut.model.Spot;

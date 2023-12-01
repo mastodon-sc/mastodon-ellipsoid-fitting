@@ -33,6 +33,7 @@ import java.util.Random;
 import org.mastodon.collection.RefObjectMap;
 import org.mastodon.collection.ref.RefObjectHashMap;
 import org.mastodon.mamut.ProjectModel;
+import org.mastodon.mamut.fitting.MinimalProjectModel;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
 import org.mastodon.mamut.model.Model;
 import org.mastodon.mamut.model.Spot;
