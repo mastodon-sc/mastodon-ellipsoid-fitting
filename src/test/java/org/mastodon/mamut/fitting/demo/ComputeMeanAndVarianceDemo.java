@@ -48,10 +48,13 @@ public class ComputeMeanAndVarianceDemo
 	}
 
 	/**
-	 * Returns an example image with a single ellipsoid. Pixel values are 0 or 42.
-	 * 0 is background, 42 is the ellipsoid.
+	 * Returns an example image with a single ellipsoid.
+	 *
+	 * @param center center of the ellipsoid
+	 * @param cov covariance matrix of the ellipsoid
+	 * @param pixelValue value of the ellipsoid
 	 */
-	private static Img< FloatType > generateExampleImage( double[] center, double[][] cov, int pixelValue )
+	private static Img< FloatType > generateExampleImage( final double[] center, final double[][] cov, final int pixelValue )
 	{
 		Img< FloatType > image = ArrayImgs.floats( 100, 100, 100 );
 		MultiVariantNormalDistributionRenderer.renderMultivariateNormalDistribution( center, cov, image );
@@ -65,9 +68,13 @@ public class ComputeMeanAndVarianceDemo
 	}
 
 	/**
-	 * Computes the mean position of the pixels whose value equals 42.
+	 * Computes the mean position of the pixels whose value equals the given {@code pixelValue}.
+	 *
+	 * @param image the image
+	 * @param pixelValue the pixel value
+	 * @return the mean position
 	 */
-	private static double[] computeMean( Img< FloatType > image, int pixelValue )
+	private static double[] computeMean( final Img< FloatType > image, final int pixelValue )
 	{
 		Cursor< FloatType > cursor = image.cursor();
 		double[] sum = new double[ 3 ];
@@ -85,9 +92,13 @@ public class ComputeMeanAndVarianceDemo
 	}
 
 	/**
-	 * Computes the covariance matrix of the pixels whose value equals 42.
+	 * Computes the covariance matrix of the pixels whose value equals the given {@code pixelValue}.
+	 *
+	 * @param image the image
+	 * @param mean the mean position
+	 * @param pixelValue the pixel value
 	 */
-	private static double[][] computeCovariance( Img< FloatType > image, double[] mean, int pixelValue )
+	private static double[][] computeCovariance( final Img< FloatType > image, final double[] mean, final int pixelValue )
 	{
 		Cursor< FloatType > cursor = image.cursor();
 		long counter = 0;
@@ -108,7 +119,7 @@ public class ComputeMeanAndVarianceDemo
 		return covariance;
 	}
 
-	private static void scale( double[][] covariance, double factor )
+	private static void scale( final double[][] covariance, final double factor )
 	{
 		for ( int i = 0; i < 3; i++ )
 			for ( int j = 0; j < 3; j++ )
