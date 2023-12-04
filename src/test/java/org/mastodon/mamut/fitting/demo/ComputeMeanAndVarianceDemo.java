@@ -32,8 +32,10 @@ public class ComputeMeanAndVarianceDemo
 				{ -10, 30, 100 }
 		};
 
+		long[] dimensions = { 100, 100, 100 };
+		int background = 0;
 		int pixelValue = 1;
-		Img< FloatType > image = generateExampleImage( center, givenCovariance, pixelValue );
+		Img< FloatType > image = generateExampleImage( center, givenCovariance, dimensions, background, pixelValue );
 		double[] mean = computeMean( image, pixelValue );
 		double[][] computedCovariance = computeCovariance( image, mean, pixelValue );
 
@@ -52,17 +54,21 @@ public class ComputeMeanAndVarianceDemo
 	 *
 	 * @param center center of the ellipsoid
 	 * @param cov covariance matrix of the ellipsoid
+	 * @param dimensions dimensions of the image
+	 * @param background value of the background
 	 * @param pixelValue value of the ellipsoid
 	 */
-	private static Img< FloatType > generateExampleImage( final double[] center, final double[][] cov, final int pixelValue )
+	private static Img< FloatType > generateExampleImage(
+			final double[] center, final double[][] cov, final long[] dimensions, final int background, final int pixelValue
+	)
 	{
-		Img< FloatType > image = ArrayImgs.floats( 100, 100, 100 );
+		Img< FloatType > image = ArrayImgs.floats( dimensions );
 		MultiVariantNormalDistributionRenderer.renderMultivariateNormalDistribution( center, cov, image );
 		LoopBuilder.setImages( image ).forEachPixel( pixel -> {
 			if ( pixel.get() > 500 )
 				pixel.set( pixelValue );
 			else
-				pixel.set( 0 );
+				pixel.set( background );
 		} );
 		return image;
 	}
