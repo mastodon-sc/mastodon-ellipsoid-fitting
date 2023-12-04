@@ -33,9 +33,9 @@ public class ComputeMeanAndVarianceDemo
 				{ -10, 30, 100 }
 		};
 
-		Img< FloatType > image = generateExampleImage( center, givenCovariance );
-		double[] mean = computeMean( image );
-		double[][] computedCovariance = computeCovariance( image, mean );
+		Img< FloatType > image = generateExampleImage( center, givenCovariance, PIXEL_VALUE );
+		double[] mean = computeMean( image, PIXEL_VALUE );
+		double[][] computedCovariance = computeCovariance( image, mean, PIXEL_VALUE );
 
 		System.out.println( "Given center: " + Arrays.toString( center ) );
 		System.out.println( "Computed mean: " + Arrays.toString( mean ) );
@@ -51,13 +51,13 @@ public class ComputeMeanAndVarianceDemo
 	 * Returns an example image with a single ellipsoid. Pixel values are 0 or 42.
 	 * 0 is background, 42 is the ellipsoid.
 	 */
-	private static Img< FloatType > generateExampleImage( double[] center, double[][] cov )
+	private static Img< FloatType > generateExampleImage( double[] center, double[][] cov, int pixelValue )
 	{
 		Img< FloatType > image = ArrayImgs.floats( 100, 100, 100 );
 		MultiVariantNormalDistributionRenderer.renderMultivariateNormalDistribution( center, cov, image );
 		LoopBuilder.setImages( image ).forEachPixel( pixel -> {
 			if ( pixel.get() > 500 )
-				pixel.set( PIXEL_VALUE );
+				pixel.set( pixelValue );
 			else
 				pixel.set( 0 );
 		} );
@@ -67,14 +67,14 @@ public class ComputeMeanAndVarianceDemo
 	/**
 	 * Computes the mean position of the pixels whose value equals 42.
 	 */
-	private static double[] computeMean( Img< FloatType > image )
+	private static double[] computeMean( Img< FloatType > image, int pixelValue )
 	{
 		Cursor< FloatType > cursor = image.cursor();
 		double[] sum = new double[ 3 ];
 		double[] position = new double[ 3 ];
 		long counter = 0;
 		while ( cursor.hasNext() )
-			if ( cursor.next().get() == PIXEL_VALUE )
+			if ( cursor.next().get() == pixelValue )
 			{
 				cursor.localize( position );
 				LinAlgHelpers.add( sum, position, sum );
@@ -87,7 +87,7 @@ public class ComputeMeanAndVarianceDemo
 	/**
 	 * Computes the covariance matrix of the pixels whose value equals 42.
 	 */
-	private static double[][] computeCovariance( Img< FloatType > image, double[] mean )
+	private static double[][] computeCovariance( Img< FloatType > image, double[] mean, int pixelValue )
 	{
 		Cursor< FloatType > cursor = image.cursor();
 		long counter = 0;
@@ -95,7 +95,7 @@ public class ComputeMeanAndVarianceDemo
 		double[][] covariance = new double[ 3 ][ 3 ];
 		cursor.reset();
 		while ( cursor.hasNext() )
-			if ( cursor.next().get() == PIXEL_VALUE )
+			if ( cursor.next().get() == pixelValue )
 			{
 				cursor.localize( position );
 				LinAlgHelpers.subtract( position, mean, position );
