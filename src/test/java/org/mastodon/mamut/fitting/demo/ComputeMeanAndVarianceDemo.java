@@ -22,7 +22,6 @@ import java.util.Arrays;
  */
 public class ComputeMeanAndVarianceDemo
 {
-	private static final int PIXEL_VALUE = 42;
 
 	public static void main( String[] args )
 	{
@@ -33,9 +32,10 @@ public class ComputeMeanAndVarianceDemo
 				{ -10, 30, 100 }
 		};
 
-		Img< FloatType > image = generateExampleImage( center, givenCovariance, PIXEL_VALUE );
-		double[] mean = computeMean( image, PIXEL_VALUE );
-		double[][] computedCovariance = computeCovariance( image, mean, PIXEL_VALUE );
+		int pixelValue = 1;
+		Img< FloatType > image = generateExampleImage( center, givenCovariance, pixelValue );
+		double[] mean = computeMean( image, pixelValue );
+		double[][] computedCovariance = computeCovariance( image, mean, pixelValue );
 
 		System.out.println( "Given center: " + Arrays.toString( center ) );
 		System.out.println( "Computed mean: " + Arrays.toString( mean ) );
