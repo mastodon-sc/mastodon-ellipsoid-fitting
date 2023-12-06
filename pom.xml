@@ -148,7 +148,18 @@
 		</developer>
 	</developers>
 
-	<contributors><contributor><name>grrrr</name></contributor></contributors>
+	<contributors>
+		<contributor>
+			<name>Stefan Hahmann</name>
+			<url>https://github.com/stefanhahmann</url>
+			<properties><id>stefanhahmann</id></properties>
+		</contributor>
+		<contributor>
+			<name>Matthias Arzt</name>
+			<url>https://github.com/maarzt</url>
+			<properties><id>maarzt</id></properties>
+		</contributor>
+	</contributors>
 
 	<repositories>
 		<repository>
