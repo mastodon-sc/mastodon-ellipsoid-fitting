@@ -26,31 +26,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting;
+package org.mastodon.mamut.fitting.util;
 
-import java.util.Objects;
 import java.util.Random;
 
 import org.mastodon.collection.RefObjectMap;
 import org.mastodon.collection.ref.RefObjectHashMap;
 import org.mastodon.mamut.ProjectModel;
+import org.mastodon.mamut.fitting.MinimalProjectModel;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
-import org.mastodon.mamut.model.Link;
 import org.mastodon.mamut.model.Model;
 import org.mastodon.mamut.model.Spot;
-import org.mastodon.model.DefaultSelectionModel;
-import org.mastodon.model.SelectionModel;
-import org.mastodon.views.bdv.SharedBigDataViewerData;
 import org.scijava.Context;
 
-import ij.ImagePlus;
-import net.imagej.ImgPlus;
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
 import net.imglib2.Interval;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
-import net.imglib2.img.display.imagej.ImgToVirtualStack;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
@@ -97,9 +88,7 @@ public class ArtificialData
 					ellipsoids.put( spot, ellipsoid );
 					drawSpot( image, interval, ellipsoid );
 				}
-		SharedBigDataViewerData sharedBDVData = asSharedBdvDataXyz( image );
-		SelectionModel< Spot, Link > selectionModel = new DefaultSelectionModel<>( model.getGraph(), model.getGraphIdBimap() );
-		minimalProjectModel = new MinimalProjectModel( model, sharedBDVData, selectionModel );
+		minimalProjectModel = DemoUtils.wrapAsMinimalModel( image, model );
 		selectAllVerticies();
 	}
 
@@ -109,12 +98,6 @@ public class ArtificialData
 		MultiVariantNormalDistributionRenderer.renderMultivariateNormalDistribution(
 				ellipsoid.getCenter(), ellipsoid.getCovariance(),
 				crop );
-	}
-
-	private static SharedBigDataViewerData asSharedBdvDataXyz( final Img< FloatType > image1 )
-	{
-		final ImagePlus image = ImgToVirtualStack.wrap( new ImgPlus<>( image1, "image", new AxisType[] { Axes.X, Axes.Y, Axes.Z } ) );
-		return Objects.requireNonNull( SharedBigDataViewerData.fromImagePlus( image ) );
 	}
 
 	private void selectAllVerticies()

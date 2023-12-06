@@ -34,7 +34,9 @@ import java.util.Arrays;
 
 import org.junit.Test;
 import org.mastodon.collection.RefObjectMap;
+import org.mastodon.mamut.fitting.FitEllipsoidPlugin;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
+import org.mastodon.mamut.fitting.util.ArtificialData;
 import org.mastodon.mamut.model.ModelGraph;
 import org.mastodon.mamut.model.Spot;
 import org.scijava.Context;

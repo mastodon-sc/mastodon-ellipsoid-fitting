@@ -22,7 +22,7 @@ public class MinimalProjectModel
 
 	private final SelectionModel< Spot, Link > selectionModel;
 
-	MinimalProjectModel(
+	public MinimalProjectModel(
 			final Model model, final SharedBigDataViewerData sharedBdvData, final SelectionModel< Spot, Link > selectionModel
 	)
 	{
