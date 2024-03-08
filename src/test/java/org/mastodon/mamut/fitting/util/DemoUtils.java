@@ -45,6 +45,7 @@ import org.mastodon.mamut.views.bdv.MamutViewBdv;
 import org.mastodon.model.DefaultSelectionModel;
 import org.mastodon.model.SelectionModel;
 import org.mastodon.views.bdv.SharedBigDataViewerData;
+import org.scijava.Context;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -59,7 +60,7 @@ public class DemoUtils
 	public static ProjectModel wrapAsAppModel( final Img< FloatType > image, final Model model )
 	{
 		final SharedBigDataViewerData sharedBigDataViewerData = asSharedBdvDataXyz( image );
-		return ProjectModel.create( null, model, sharedBigDataViewerData, null );
+		return ProjectModel.create( new Context(), model, sharedBigDataViewerData, null );
 	}
 
 	public static MinimalProjectModel wrapAsMinimalModel( final Img< FloatType > image, final Model model )

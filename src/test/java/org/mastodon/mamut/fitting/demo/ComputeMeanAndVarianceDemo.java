@@ -35,6 +35,11 @@ import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.LinAlgHelpers;
 
+import net.imglib2.util.Pair;
+import net.imglib2.util.StopWatch;
+import net.imglib2.util.ValuePair;
+import org.mastodon.mamut.fitting.demo.onlinemath.CovarianceMatrix;
+import org.mastodon.mamut.fitting.demo.onlinemath.MeansVector;
 import org.mastodon.mamut.fitting.util.DemoUtils;
 import org.mastodon.mamut.fitting.util.MultiVariantNormalDistributionRenderer;
 import org.mastodon.mamut.model.Model;
@@ -64,13 +69,26 @@ public class ComputeMeanAndVarianceDemo
 		int background = 0;
 		int pixelValue = 1;
 		Img< FloatType > image = generateExampleImage( center, givenCovariance, dimensions, background, pixelValue );
+
+		StopWatch stopWatchOnline = StopWatch.createAndStart();
+		Pair< double[], double[][] > onlineResults = computeMeanCovarianceOnline( image, pixelValue );
+		double[] onlineMean = onlineResults.getA();
+		double[][] onlineCovariance = onlineResults.getB();
+		stopWatchOnline.stop();
+
+		StopWatch stopWatchTwoPass = StopWatch.createAndStart();
 		double[] mean = computeMean( image, pixelValue );
 		double[][] computedCovariance = computeCovariance( image, mean, pixelValue );
+		stopWatchTwoPass.stop();
 
 		System.out.println( "Given center: " + Arrays.toString( center ) );
 		System.out.println( "Computed mean: " + Arrays.toString( mean ) );
+		System.out.println( "Computed mean online: " + Arrays.toString( onlineMean ) );
 		System.out.println( "Given covariance: " + Arrays.deepToString( givenCovariance ) );
 		System.out.println( "Computed covariance: " + Arrays.deepToString( computedCovariance ) );
+		System.out.println( "Computed covariance online: " + Arrays.deepToString( onlineCovariance ) );
+		System.out.println( "Time to compute mean and covariance: \n" + stopWatchTwoPass.nanoTime() / 1e9 + " nano seconds" );
+		System.out.println( "Time to compute mean and covariance online: \n" + stopWatchOnline.nanoTime() / 1e9 + " nano seconds" );
 
 		Model model = new Model();
 		model.getGraph().addVertex().init( 0, mean, computedCovariance );
@@ -127,6 +145,7 @@ public class ComputeMeanAndVarianceDemo
 
 	/**
 	 * Computes the covariance matrix of the pixels whose value equals the given {@code pixelValue}.
+	 * Uses a two-pass algorithm to compute the covariance matrix, cf. <a href=https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Two-pass>Two-pass algorithm for covariance</a>
 	 *
 	 * @param image the image
 	 * @param mean the mean position
@@ -147,10 +166,38 @@ public class ComputeMeanAndVarianceDemo
 				for ( int i = 0; i < 3; i++ )
 					for ( int j = 0; j < 3; j++ )
 						covariance[ i ][ j ] += position[ i ] * position[ j ];
+
 				counter++;
 			}
 		scale( covariance, 5. / counter ); // I don't know why the factor 5 is needed. But it works.
 		return covariance;
+	}
+
+	/**
+	 * Computes the covariance matrix of the pixels whose value equals the given {@code pixelValue}.
+	 * Uses an online algorithm to compute the covariance matrix, cf. <a href=https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online>Online algorithm for covariance</a>
+	 *
+	 * @param image the image
+	 * @param pixelValue the pixel value
+	 */
+	private static Pair< double[], double[][] > computeMeanCovarianceOnline( final Img< FloatType > image, final int pixelValue )
+	{
+		Cursor< FloatType > cursor = image.cursor();
+		int[] position = new int[ 3 ];
+		cursor.reset();
+		MeansVector meansVector = new MeansVector( 3 );
+		CovarianceMatrix matrix = new CovarianceMatrix( 3 );
+		while ( cursor.hasNext() )
+			if ( cursor.next().get() == pixelValue )
+			{
+				cursor.localize( position );
+				meansVector.addValue( position );
+				matrix.addValue( position );
+			}
+		double[] means = meansVector.get();
+		double[][] covariances = matrix.get();
+		scale( covariances, 5 ); // I don't know why the factor 5 is needed. But it works.
+		return new ValuePair<>( means, covariances );
 	}
 
 	private static void scale( final double[][] covariance, final double factor )
