@@ -100,7 +100,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 	static
 	{
-		menuTexts.put( FIT_SELECTED_VERTICES, "Fit Selected Vertices" );
+		menuTexts.put( FIT_SELECTED_VERTICES, "Ellipsoid fitting" );
 	}
 
 	/*
@@ -149,8 +149,9 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	{
 		return Arrays.asList(
 				menu( "Plugins",
-						menu( "Ellipsoid Fitting",
-								item( FIT_SELECTED_VERTICES ) ) ) );
+						menu( "Spots management",
+								menu( "Transform spots",
+										item( FIT_SELECTED_VERTICES ) ) ) ) );
 	}
 
 	@Override
