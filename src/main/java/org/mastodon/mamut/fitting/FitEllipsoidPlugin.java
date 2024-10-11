@@ -2,7 +2,7 @@
  * #%L
  * mastodon-ellipsoid-fitting
  * %%
- * Copyright (C) 2015 - 2023 Tobias Pietzsch, Jean-Yves Tinevez
+ * Copyright (C) 2015 - 2024 Tobias Pietzsch, Jean-Yves Tinevez
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -100,7 +100,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 	static
 	{
-		menuTexts.put( FIT_SELECTED_VERTICES, "Fit Selected Vertices" );
+		menuTexts.put( FIT_SELECTED_VERTICES, "Ellipsoid fitting" );
 	}
 
 	/*
@@ -126,7 +126,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 	private final AbstractNamedAction fitSelectedVerticesAction;
 
-	private ProjectModel projectModel;
+	private MinimalProjectModel minimalProjectModel;
 
 	public FitEllipsoidPlugin()
 	{
@@ -134,9 +134,14 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	}
 
 	@Override
-	public void setAppPluginModel( final ProjectModel model )
+	public void setAppPluginModel( final ProjectModel projectModel )
 	{
-		this.projectModel = model;
+		this.minimalProjectModel = new MinimalProjectModel( projectModel );
+	}
+
+	void setMinimalProjectModel( final MinimalProjectModel minimalProjectModel )
+	{
+		this.minimalProjectModel = minimalProjectModel;
 	}
 
 	@Override
@@ -144,8 +149,9 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	{
 		return Arrays.asList(
 				menu( "Plugins",
-						menu( "Ellipsoid Fitting",
-								item( FIT_SELECTED_VERTICES ) ) ) );
+						menu( "Spots management",
+								menu( "Transform spots",
+										item( FIT_SELECTED_VERTICES ) ) ) ) );
 	}
 
 	@Override
@@ -160,11 +166,11 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		actions.namedAction( fitSelectedVerticesAction, FIT_SELECTED_VERTICES_KEYS );
 	}
 
-	void fitSelectedVertices()
+	public void fitSelectedVertices()
 	{
 		// TODO: parameters to select which source to act on
 		final int sourceIndex = 0;
-		final SourceAndConverter< ? > source = projectModel.getSharedBdvData().getSources().get( sourceIndex );
+		final SourceAndConverter< ? > source = minimalProjectModel.getSharedBdvData().getSources().get( sourceIndex );
 		if ( !( source.getSpimSource().getType() instanceof RealType ) )
 			throw new IllegalArgumentException( "Expected RealType image source" );
 		process( Cast.unchecked( source ) );
@@ -179,7 +185,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	@SuppressWarnings( "unused" )
 	private < T extends RealType< T > > void process( final SourceAndConverter< T > source )
 	{
-		final RefSet< Spot > vertices = projectModel.getSelectionModel().getSelectedVertices();
+		final RefSet< Spot > vertices = minimalProjectModel.getSelectionModel().getSelectedVertices();
 		if ( vertices.isEmpty() )
 			System.err.println( "no vertex selected" );
 
@@ -193,7 +199,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 		final ArrayList< Spot > threadSafeVertices = asArrayList( vertices );
 		// NB: RefSet is not thread-safe for iteration.
 		final int totalTasks = vertices.size();
-		final ReentrantReadWriteLock.WriteLock writeLock = projectModel.getModel().getGraph().getLock().writeLock();
+		final ReentrantReadWriteLock.WriteLock writeLock = minimalProjectModel.getModel().getGraph().getLock().writeLock();
 
 		Parallelization.getTaskExecutor().forEach( threadSafeVertices, spot -> {
 			// loop over vertices in parallel using multiple threads
@@ -253,7 +259,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 
 		// set undo point if at least one spot was fitted
 		if ( found.get() > 0 )
-			projectModel.getModel().setUndoPoint();
+			minimalProjectModel.getModel().setUndoPoint();
 	}
 
 	private static ArrayList< Spot > asArrayList( final RefSet< Spot > vertices )
@@ -405,7 +411,7 @@ public class FitEllipsoidPlugin extends AbstractContextual implements MamutPlugi
 	{
 		final BdvStackSource< FloatType > inputSource =
 				BdvFunctions.show( input, "FloatType input", Bdv.options().sourceTransform( sourceToGlobal ) );
-		final ConverterSetups setups = projectModel.getSharedBdvData().getConverterSetups();
+		final ConverterSetups setups = minimalProjectModel.getSharedBdvData().getConverterSetups();
 		final ConverterSetup cs = setups.getConverterSetup( source );
 		final Bounds bounds = setups.getBounds().getBounds( cs );
 		inputSource.setDisplayRange( cs.getDisplayRangeMin(), cs.getDisplayRangeMax() );

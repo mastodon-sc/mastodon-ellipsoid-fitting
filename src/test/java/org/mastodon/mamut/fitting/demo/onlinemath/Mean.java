@@ -26,48 +26,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting.ellipsoid;
+package org.mastodon.mamut.fitting.demo.onlinemath;
 
-import net.imglib2.util.LinAlgHelpers;
-
-public class Ellipsoid extends HyperEllipsoid
+public class Mean
 {
-	/**
-	 * Construct 3D ellipsoid. Some of the parameters may be null. The center
-	 * parameter is always required. Moreover, either
-	 * <ul>
-	 * <li>covariance or</li>
-	 * <li>precision or</li>
-	 * <li>axes and radii</li>
-	 * </ul>
-	 * must be provided.
-	 *
-	 * @param center
-	 *            coordinates of center. must not be {@code null}.
-	 * @param covariance
-	 *            the covariance of the ellipsoid.
-	 * @param precision
-	 *            the precision of the ellipsoid.
-	 * @param axes
-	 *            the axes of the ellipsoid.
-	 * @param radii
-	 *            the radii of the ellipsoid.
-	 */
-	public Ellipsoid( final double[] center, final double[][] covariance, final double[][] precision, final double[][] axes, final double[] radii )
+	private long sum = 0;
+
+	private int n;
+
+	public void addValue( long x )
 	{
-		super( center, covariance, precision, axes, radii );
+		n++;
+		sum += x;
 	}
 
-	@Override
-	public String toString()
+	public double get()
 	{
-		return "center = " +
-				LinAlgHelpers.toString( getCenter() )
-				+ "\nradii = " +
-				LinAlgHelpers.toString( getRadii() )
-				+ "\naxes = " +
-				LinAlgHelpers.toString( getAxes() )
-				+ "\nprecision = " +
-				LinAlgHelpers.toString( getPrecision() );
+		return ( double ) sum / n;
 	}
 }

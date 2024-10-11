@@ -26,48 +26,44 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting.ellipsoid;
+package org.mastodon.mamut.fitting.demo.onlinemath;
 
-import net.imglib2.util.LinAlgHelpers;
-
-public class Ellipsoid extends HyperEllipsoid
+/**
+ * Computes the covariance matrix for a series of coordinates using the online algorithm.
+ * @see <a href="https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online">Algorithms for calculating variance</a>
+ */
+public class CovarianceMatrix
 {
-	/**
-	 * Construct 3D ellipsoid. Some of the parameters may be null. The center
-	 * parameter is always required. Moreover, either
-	 * <ul>
-	 * <li>covariance or</li>
-	 * <li>precision or</li>
-	 * <li>axes and radii</li>
-	 * </ul>
-	 * must be provided.
-	 *
-	 * @param center
-	 *            coordinates of center. must not be {@code null}.
-	 * @param covariance
-	 *            the covariance of the ellipsoid.
-	 * @param precision
-	 *            the precision of the ellipsoid.
-	 * @param axes
-	 *            the axes of the ellipsoid.
-	 * @param radii
-	 *            the radii of the ellipsoid.
-	 */
-	public Ellipsoid( final double[] center, final double[][] covariance, final double[][] precision, final double[][] axes, final double[] radii )
+	private final Covariance[][] covariances;
+
+	public CovarianceMatrix( int dimensions )
 	{
-		super( center, covariance, precision, axes, radii );
+		covariances = new Covariance[ dimensions ][ dimensions ];
 	}
 
-	@Override
-	public String toString()
+	public void addValue( int[] x )
 	{
-		return "center = " +
-				LinAlgHelpers.toString( getCenter() )
-				+ "\nradii = " +
-				LinAlgHelpers.toString( getRadii() )
-				+ "\naxes = " +
-				LinAlgHelpers.toString( getAxes() )
-				+ "\nprecision = " +
-				LinAlgHelpers.toString( getPrecision() );
+		if ( x.length != covariances.length )
+			throw new IllegalArgumentException( "Input vector has wrong dimension." );
+		for ( int i = 0; i < x.length; i++ )
+		{
+			for ( int j = i; j < x.length; j++ )
+			{
+				if ( covariances[ i ][ j ] == null )
+					covariances[ i ][ j ] = new Covariance();
+				covariances[ i ][ j ].addValue( x[ i ], x[ j ] );
+				if ( i != j )
+					covariances[ j ][ i ] = covariances[ i ][ j ];
+			}
+		}
+	}
+
+	public double[][] get()
+	{
+		double[][] result = new double[ covariances.length ][ covariances.length ];
+		for ( int i = 0; i < covariances.length; i++ )
+			for ( int j = 0; j < covariances.length; j++ )
+				result[ i ][ j ] = covariances[ i ][ j ].get();
+		return result;
 	}
 }

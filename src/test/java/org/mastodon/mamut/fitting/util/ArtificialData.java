@@ -2,7 +2,7 @@
  * #%L
  * mastodon-ellipsoid-fitting
  * %%
- * Copyright (C) 2015 - 2023 Tobias Pietzsch, Jean-Yves Tinevez
+ * Copyright (C) 2015 - 2024 Tobias Pietzsch, Jean-Yves Tinevez
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,28 +26,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting;
+package org.mastodon.mamut.fitting.util;
 
-import java.util.Objects;
 import java.util.Random;
 
 import org.mastodon.collection.RefObjectMap;
 import org.mastodon.collection.ref.RefObjectHashMap;
 import org.mastodon.mamut.ProjectModel;
+import org.mastodon.mamut.fitting.MinimalProjectModel;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
 import org.mastodon.mamut.model.Model;
 import org.mastodon.mamut.model.Spot;
-import org.mastodon.views.bdv.SharedBigDataViewerData;
 import org.scijava.Context;
 
-import ij.ImagePlus;
-import net.imagej.ImgPlus;
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
 import net.imglib2.Interval;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
-import net.imglib2.img.display.imagej.ImgToVirtualStack;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
@@ -56,7 +50,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 /**
- * Renders a grid of ellipsoids in 3D, and wraps the result in a {@link MamutAppModel}.
+ * Renders a grid of ellipsoids in 3D, and wraps the result in a {@link ProjectModel}.
  */
 public class ArtificialData
 {
@@ -69,12 +63,15 @@ public class ArtificialData
 
 	private final int numberOfSpots = columns * columns * columns;
 
-	private final ProjectModel appModel;
+	private final Context context;
+
+	private final MinimalProjectModel minimalProjectModel;
 
 	private final RefObjectMap< Spot, Ellipsoid > ellipsoids;
 
 	public ArtificialData( final Context context )
 	{
+		this.context = context;
 		final Model model = new Model();
 		ellipsoids = new RefObjectHashMap<>( model.getGraph().vertices().getRefPool(), numberOfSpots );
 		final Img< FloatType > image = ArrayImgs.floats( columns * size, columns * size, columns * size );
@@ -91,8 +88,7 @@ public class ArtificialData
 					ellipsoids.put( spot, ellipsoid );
 					drawSpot( image, interval, ellipsoid );
 				}
-
-		appModel = wrapAsAppModel( image, model, context );
+		minimalProjectModel = DemoUtils.wrapAsMinimalModel( image, model );
 		selectAllVerticies();
 	}
 
@@ -104,16 +100,10 @@ public class ArtificialData
 				crop );
 	}
 
-	private static SharedBigDataViewerData asSharedBdvDataXyz( final Img< FloatType > image1 )
-	{
-		final ImagePlus image = ImgToVirtualStack.wrap( new ImgPlus<>( image1, "image", new AxisType[] { Axes.X, Axes.Y, Axes.Z } ) );
-		return Objects.requireNonNull( SharedBigDataViewerData.fromImagePlus( image ) );
-	}
-
 	private void selectAllVerticies()
 	{
-		for ( final Spot vertex : appModel.getModel().getGraph().vertices() )
-			appModel.getSelectionModel().setSelected( vertex, true );
+		for ( final Spot vertex : minimalProjectModel.getModel().getGraph().vertices() )
+			minimalProjectModel.getSelectionModel().setSelected( vertex, true );
 	}
 
 	private Ellipsoid randomizedEllipsoid( final double[] center )
@@ -167,15 +157,14 @@ public class ArtificialData
 		return r;
 	}
 
-	private static ProjectModel wrapAsAppModel( final Img< FloatType > image, final Model model, final Context context )
-	{
-		final SharedBigDataViewerData sharedBigDataViewerData = asSharedBdvDataXyz( image );
-		return ProjectModel.create( context, model, sharedBigDataViewerData, null );
-	}
-
 	public ProjectModel getAppModel()
 	{
-		return appModel;
+		return ProjectModel.create( context, minimalProjectModel.getModel(), minimalProjectModel.getSharedBdvData(), null );
+	}
+
+	public MinimalProjectModel getMinimalProjectModel()
+	{
+		return minimalProjectModel;
 	}
 
 	public RefObjectMap< Spot, Ellipsoid> getExpectedEllipsoids()

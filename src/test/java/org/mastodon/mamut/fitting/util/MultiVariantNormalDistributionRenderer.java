@@ -2,7 +2,7 @@
  * #%L
  * mastodon-ellipsoid-fitting
  * %%
- * Copyright (C) 2015 - 2023 Tobias Pietzsch, Jean-Yves Tinevez
+ * Copyright (C) 2015 - 2024 Tobias Pietzsch, Jean-Yves Tinevez
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting;
+package org.mastodon.mamut.fitting.util;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.loops.LoopBuilder;

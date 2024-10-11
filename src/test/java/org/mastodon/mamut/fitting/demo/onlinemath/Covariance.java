@@ -2,7 +2,7 @@
  * #%L
  * mastodon-ellipsoid-fitting
  * %%
- * Copyright (C) 2015 - 2023 Tobias Pietzsch, Jean-Yves Tinevez
+ * Copyright (C) 2015 - 2024 Tobias Pietzsch, Jean-Yves Tinevez
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,34 +26,33 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting;
-
-import javax.annotation.Nonnull;
-
-import org.mastodon.mamut.ProjectModel;
-import org.mastodon.mamut.views.bdv.MamutViewBdv;
-import org.scijava.Context;
-
-import net.imglib2.type.numeric.RealType;
+package org.mastodon.mamut.fitting.demo.onlinemath;
 
 /**
- * Runs the {@link FitEllipsoidPlugin} on synthetic data
- * and shows the result in a BDV window.
+ * Computes the covariance for two variables using an online algorithm.
+ * @see <a href="https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online">Algorithms for calculating variance</a>
  */
-public class FitEllipsoidPluginDemo
+public class Covariance
 {
+	private double meanX = 0;
 
-	public static void main( final String... args )
+	private double meanY = 0;
+
+	private double c = 0;
+
+	private int n = 0;
+
+	public void addValue( double x, double y )
 	{
-		final ArtificialData data = new ArtificialData( new Context() );
-		final FitEllipsoidPlugin plugin = new FitEllipsoidPlugin();
-		plugin.setAppPluginModel( data.getAppModel() );
-		plugin.fitSelectedVertices();
-		showBdvWindow( data.getAppModel() );
+		n++;
+		double dx = x - meanX;
+		meanX += dx / n;
+		meanY += ( y - meanY ) / n;
+		c += dx * ( y - meanY );
 	}
 
-	private static < T extends RealType< T > > void showBdvWindow( @Nonnull final ProjectModel appModel )
+	public double get()
 	{
-		appModel.getWindowManager().createView( MamutViewBdv.class );
+		return c / ( n - 1 );
 	}
 }

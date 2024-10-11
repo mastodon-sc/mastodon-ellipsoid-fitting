@@ -26,48 +26,32 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package org.mastodon.mamut.fitting.ellipsoid;
+package org.mastodon.mamut.fitting.demo.onlinemath;
 
-import net.imglib2.util.LinAlgHelpers;
-
-public class Ellipsoid extends HyperEllipsoid
+public class MeansVector
 {
-	/**
-	 * Construct 3D ellipsoid. Some of the parameters may be null. The center
-	 * parameter is always required. Moreover, either
-	 * <ul>
-	 * <li>covariance or</li>
-	 * <li>precision or</li>
-	 * <li>axes and radii</li>
-	 * </ul>
-	 * must be provided.
-	 *
-	 * @param center
-	 *            coordinates of center. must not be {@code null}.
-	 * @param covariance
-	 *            the covariance of the ellipsoid.
-	 * @param precision
-	 *            the precision of the ellipsoid.
-	 * @param axes
-	 *            the axes of the ellipsoid.
-	 * @param radii
-	 *            the radii of the ellipsoid.
-	 */
-	public Ellipsoid( final double[] center, final double[][] covariance, final double[][] precision, final double[][] axes, final double[] radii )
+	private final Mean[] means;
+
+	public MeansVector( int dimensions )
 	{
-		super( center, covariance, precision, axes, radii );
+		means = new Mean[ dimensions ];
 	}
 
-	@Override
-	public String toString()
+	public void addValue( int[] x )
 	{
-		return "center = " +
-				LinAlgHelpers.toString( getCenter() )
-				+ "\nradii = " +
-				LinAlgHelpers.toString( getRadii() )
-				+ "\naxes = " +
-				LinAlgHelpers.toString( getAxes() )
-				+ "\nprecision = " +
-				LinAlgHelpers.toString( getPrecision() );
+		for ( int i = 0; i < x.length; i++ )
+		{
+			if ( means[ i ] == null )
+				means[ i ] = new Mean();
+			means[ i ].addValue( x[ i ] );
+		}
+	}
+
+	public double[] get()
+	{
+		double[] result = new double[ means.length ];
+		for ( int i = 0; i < means.length; i++ )
+			result[ i ] = means[ i ].get();
+		return result;
 	}
 }
