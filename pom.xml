@@ -10,7 +10,7 @@
 
 	<groupId>org.mastodon</groupId>
 	<artifactId>mastodon-ellipsoid-fitting</artifactId>
-	<version>0.5.1-SNAPSHOT</version>
+	<version>0.6.1-SNAPSHOT</version>
 
 	<name>Mastodon Ellipsoid Fitting</name>
 	<description>Mastodon plugin for fitting ellipsoids around spots</description>
@@ -126,8 +126,7 @@
 		<license.projectName>mastodon-ellipsoid-fitting</license.projectName>
 		<license.organizationName>Mastodon authors</license.organizationName>
 		<license.copyrightOwners>Tobias Pietzsch, Jean-Yves Tinevez</license.copyrightOwners>
-
-		<mastodon.version>1.0.0-beta-30</mastodon.version>
+		<mastodon.version>1.0.0-beta-31</mastodon.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
