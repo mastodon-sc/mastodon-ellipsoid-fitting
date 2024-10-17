@@ -34,7 +34,6 @@ import java.util.Arrays;
 
 import org.junit.Test;
 import org.mastodon.collection.RefObjectMap;
-import org.mastodon.mamut.fitting.FitEllipsoidPlugin;
 import org.mastodon.mamut.fitting.ellipsoid.Ellipsoid;
 import org.mastodon.mamut.fitting.util.ArtificialData;
 import org.mastodon.mamut.model.ModelGraph;
@@ -63,7 +62,7 @@ public class FitEllipsoidPluginTest
 		plugin.fitSelectedVertices();
 		System.out.println( watch );
 		final int success = countCorrectEllipsoids( data );
-		ModelGraph graph = data.getMinimalProjectModel().getModel().getGraph();
+		final ModelGraph graph = data.getMinimalProjectModel().getModel().getGraph();
 		assertEquals( "Not all ellipsoids were fitted correctly.", graph.vertices().size(), success );
 	}
 
