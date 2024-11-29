@@ -126,7 +126,7 @@
 		<license.projectName>mastodon-ellipsoid-fitting</license.projectName>
 		<license.organizationName>Mastodon authors</license.organizationName>
 		<license.copyrightOwners>Tobias Pietzsch, Jean-Yves Tinevez</license.copyrightOwners>
-		<mastodon.version>1.0.0-beta-32</mastodon.version>
+		<mastodon.version>1.0.0-beta-33</mastodon.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
